@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "世界旅記録",
+    "slug": "tabi-log-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "tabilog",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "platforms": ["ios"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.tabilog.ios"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#F5EFE3"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
