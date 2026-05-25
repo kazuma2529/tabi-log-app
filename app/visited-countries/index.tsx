@@ -9,6 +9,8 @@ export default function VisitedCountriesScreen() {
     <AppScreen
       title="旅した国"
       headerAlign="center"
+      variant="diary"
+      backgroundImage={require('../../assets/images/diary-travel-background.png')}
       left={<BackIconButton onPress={() => router.back()} />}
     >
       <VisitedCountriesList />

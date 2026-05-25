@@ -1,6 +1,6 @@
-import { COUNTRY_BY_ID } from '@/data';
-import { compareISODate } from '@/lib';
-import type { CountrySummary, TravelData, VisitBundle } from '@/types';
+import { COUNTRY_BY_ID } from "@/data";
+import { compareISODate } from "@/lib";
+import type { CountrySummary, TravelData, VisitBundle } from "@/types";
 
 export function getVisitBundles(data: TravelData): VisitBundle[] {
   return data.visits
@@ -33,7 +33,9 @@ export function getCountrySummaries(data: TravelData): CountrySummary[] {
 
   return [...grouped.values()]
     .map((visits) => {
-      const sortedVisits = [...visits].sort((a, b) => compareISODate(a.visit.visitedAt, b.visit.visitedAt));
+      const sortedVisits = [...visits].sort((a, b) =>
+        compareISODate(a.visit.visitedAt, b.visit.visitedAt),
+      );
       const latest = sortedVisits[sortedVisits.length - 1];
 
       return {
@@ -54,7 +56,9 @@ export function getCountrySummaries(data: TravelData): CountrySummary[] {
 }
 
 export function getCountrySummary(data: TravelData, countryId: string) {
-  return getCountrySummaries(data).find((summary) => summary.country.id === countryId);
+  return getCountrySummaries(data).find(
+    (summary) => summary.country.id === countryId,
+  );
 }
 
 export function getRecentCountries(data: TravelData, limit = 5) {
@@ -63,7 +67,11 @@ export function getRecentCountries(data: TravelData, limit = 5) {
 
 export function getMostVisitedCountry(data: TravelData) {
   const summaries = getCountrySummaries(data);
-  return [...summaries].sort((a, b) => b.visitCount - a.visitCount || b.lastVisitedAt.localeCompare(a.lastVisitedAt))[0];
+  return [...summaries].sort(
+    (a, b) =>
+      b.visitCount - a.visitCount ||
+      b.lastVisitedAt.localeCompare(a.lastVisitedAt),
+  )[0];
 }
 
 export function getLatestVisitedCountry(data: TravelData) {
