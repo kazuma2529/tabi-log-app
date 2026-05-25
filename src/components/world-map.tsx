@@ -32,7 +32,6 @@ export function WorldMap({ visitedCountryIds, bucketCountryIds, onOpenCountry, o
   const countries = getMapCountries();
   const countriesByIso = new Map(countries.map((country) => [country.isoCode, country]));
   const tappableCountries = countries.filter((country) => WORLD_COUNTRY_PATH_BY_ISO[country.isoCode]);
-  const markerCountries = countries.filter((country) => !WORLD_COUNTRY_PATH_BY_ISO[country.isoCode]);
   const backgroundCountries = WORLD_COUNTRY_PATHS.filter((country) => country.isoCode !== 'AQ' && !countriesByIso.has(country.isoCode));
 
   const scale = useSharedValue(1);
@@ -203,7 +202,7 @@ export function WorldMap({ visitedCountryIds, bucketCountryIds, onOpenCountry, o
                   />
                 );
               })}
-              {countries.map((country) => (
+              {tappableCountries.map((country) => (
                 <Circle
                   key={`${country.id}-tap`}
                   cx={(country.mapX / 100) * 360}
@@ -213,23 +212,6 @@ export function WorldMap({ visitedCountryIds, bucketCountryIds, onOpenCountry, o
                   onPress={() => handleCountryPress(country)}
                 />
               ))}
-              {markerCountries.map((country) => {
-                const visited = visitedCountryIds.has(country.id);
-                const listed = bucketCountryIds.has(country.id);
-
-                return (
-                  <Circle
-                    key={`${country.id}-marker`}
-                    cx={(country.mapX / 100) * 360}
-                    cy={(country.mapY / 100) * 198}
-                    r={visited ? 3.8 : listed ? 3.6 : 3.1}
-                    fill={visited ? colors.visited : listed ? colors.accentGoldLight : colors.unvisited}
-                    stroke={visited ? colors.accentTealDark : listed ? colors.accentGold : '#BFB8AA'}
-                    strokeWidth={1}
-                    onPress={() => handleCountryPress(country)}
-                  />
-                );
-              })}
             </Svg>
           </Animated.View>
         </Animated.View>

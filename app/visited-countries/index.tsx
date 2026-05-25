@@ -11,9 +11,10 @@ export default function VisitedCountriesScreen() {
   return (
     <AppScreen
       title="旅した国"
-      right={
-        <Pressable accessibilityRole="button" accessibilityLabel="戻る" style={styles.closeButton} onPress={() => router.back()}>
-          <Ionicons name="close" size={22} color={colors.textPrimary} />
+      headerAlign="center"
+      left={
+        <Pressable accessibilityRole="button" accessibilityLabel="戻る" style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </Pressable>
       }
     >
@@ -23,7 +24,7 @@ export default function VisitedCountriesScreen() {
 }
 
 const styles = StyleSheet.create({
-  closeButton: {
+  backButton: {
     width: 42,
     height: 42,
     alignItems: 'center',

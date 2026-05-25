@@ -3,8 +3,8 @@ export const TOTAL_TARGET_COUNTRIES = 196;
 export const FREE_PHOTO_LIMIT = 10;
 
 export const REGION_TARGETS = {
-  アジア: 48,
-  ヨーロッパ: 44,
+  アジア: 46,
+  ヨーロッパ: 46,
   北米: 23,
   南米: 12,
   アフリカ: 54,

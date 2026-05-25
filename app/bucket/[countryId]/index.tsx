@@ -59,7 +59,7 @@ export default function BucketCountryScreen() {
 
       <View style={styles.section}>
         <Text selectable style={styles.sectionTitle}>
-          行ってみたいこと・してみたいこと
+          やりたいこと・行きたい場所
         </Text>
         <Text selectable style={styles.sectionHint}>
           この国で叶えたい体験を書き残しておきましょう。

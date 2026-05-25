@@ -90,6 +90,29 @@ export async function initializeDatabase() {
   await seedCountries(db);
   await ensurePurchaseRow(db);
   await migratePhotoPathsToRelative(db);
+  await removeJapanLegacyData(db);
+}
+
+async function removeJapanLegacyData(db: Database) {
+  // 旧仕様で日本を記録対象に含めていた時期のデータを除去する。
+  // 「日本人ユーザー向け」コンセプトに合わせて、日本は記録対象から外す。
+  const jpVisitIds = await db.getAllAsync<{ id: string }>(
+    `SELECT id FROM visits WHERE country_id = ?`,
+    'jp',
+  );
+  if (jpVisitIds.length > 0) {
+    const placeholders = jpVisitIds.map(() => '?').join(',');
+    const ids = jpVisitIds.map((row) => row.id);
+    const photos = await db.getAllAsync<{ uri: string }>(
+      `SELECT uri FROM photos WHERE visit_id IN (${placeholders})`,
+      ...ids,
+    );
+    await deletePhotoFiles(photos.map((p) => p.uri));
+    await db.runAsync(`DELETE FROM visits WHERE country_id = ?`, 'jp');
+  }
+  await db.runAsync(`DELETE FROM bucket_list WHERE country_id = ?`, 'jp');
+  await db.runAsync(`DELETE FROM bucket_memos WHERE country_id = ?`, 'jp');
+  await db.runAsync(`DELETE FROM countries WHERE id = ?`, 'jp');
 }
 
 async function migratePhotoPathsToRelative(db: Database) {

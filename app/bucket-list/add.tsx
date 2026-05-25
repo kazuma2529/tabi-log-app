@@ -4,17 +4,24 @@ import { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, CountryRow, PaperCard, SearchInput } from '@/components';
-import { COUNTRIES, searchCountries } from '@/data';
+import { COUNTRY_BY_ID, RECOMMENDED_BUCKET_COUNTRY_IDS, searchCountries } from '@/data';
 import { isCountryInBucket } from '@/features';
 import { useTravel } from '@/hooks';
 import { colors, spacing } from '@/theme';
+import type { Country } from '@/types';
 
 export default function BucketListAddScreen() {
   const router = useRouter();
   const { data, addBucketCountry } = useTravel();
   const [query, setQuery] = useState('');
   const results = useMemo(() => searchCountries(query).slice(0, 12), [query]);
-  const suggestions = useMemo(() => COUNTRIES.slice(0, 6), []);
+  const suggestions = useMemo(
+    () =>
+      RECOMMENDED_BUCKET_COUNTRY_IDS.map((id) => COUNTRY_BY_ID[id]).filter(
+        (country): country is Country => Boolean(country) && !isCountryInBucket(data, country.id),
+      ),
+    [data],
+  );
 
   async function handleAdd(countryId: string) {
     if (isCountryInBucket(data, countryId)) {
@@ -58,7 +65,7 @@ export default function BucketListAddScreen() {
         ) : null}
       </PaperCard>
 
-      {query.trim().length === 0 ? (
+      {query.trim().length === 0 && suggestions.length > 0 ? (
         <View style={styles.suggestBlock}>
           <Text selectable style={styles.suggestTitle}>
             おすすめ
@@ -68,8 +75,8 @@ export default function BucketListAddScreen() {
               <CountryRow
                 key={country.id}
                 country={country}
-                meta={isCountryInBucket(data, country.id) ? '追加済み' : 'タップして追加'}
-                actionIcon={isCountryInBucket(data, country.id) ? 'checkmark' : 'add-circle'}
+                meta="タップして追加"
+                actionIcon="add-circle"
                 onPress={() => handleAdd(country.id)}
               />
             ))}

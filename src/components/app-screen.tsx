@@ -8,6 +8,7 @@ import { colors, spacing } from '@/theme';
 type AppScreenProps = {
   title?: string;
   subtitle?: string;
+  left?: ReactNode;
   right?: ReactNode;
   children: ReactNode;
   sky?: boolean;
@@ -19,6 +20,7 @@ type AppScreenProps = {
 export function AppScreen({
   title,
   subtitle,
+  left,
   right,
   children,
   sky = false,
@@ -47,19 +49,37 @@ export function AppScreen({
         ]}
       >
         {title ? (
-          <View style={[styles.header, headerAlign === 'center' && styles.centerHeader]}>
-            <View style={[styles.headerText, headerAlign === 'center' && styles.centerHeaderText]}>
-              <Text selectable style={styles.title}>
-                {title}
-              </Text>
-              {subtitle ? (
-                <Text selectable style={styles.subtitle}>
-                  {subtitle}
+          headerAlign === 'center' && (left || right) ? (
+            <View style={styles.header}>
+              <View style={styles.sideSlot}>{left}</View>
+              <View style={styles.centerTitleSlot}>
+                <Text selectable style={styles.title}>
+                  {title}
                 </Text>
-              ) : null}
+                {subtitle ? (
+                  <Text selectable style={styles.subtitle}>
+                    {subtitle}
+                  </Text>
+                ) : null}
+              </View>
+              <View style={styles.sideSlot}>{right}</View>
             </View>
-            {right}
-          </View>
+          ) : (
+            <View style={[styles.header, headerAlign === 'center' && styles.centerHeader]}>
+              {left}
+              <View style={[styles.headerText, headerAlign === 'center' && styles.centerHeaderText]}>
+                <Text selectable style={styles.title}>
+                  {title}
+                </Text>
+                {subtitle ? (
+                  <Text selectable style={styles.subtitle}>
+                    {subtitle}
+                  </Text>
+                ) : null}
+              </View>
+              {right}
+            </View>
+          )
         ) : null}
         {children}
       </ScrollView>
@@ -184,6 +204,17 @@ const styles = StyleSheet.create({
   centerHeaderText: {
     alignItems: 'center',
     flex: 0,
+  },
+  sideSlot: {
+    minWidth: 42,
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  centerTitleSlot: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
   },
   title: {
     color: colors.textPrimary,

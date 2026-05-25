@@ -203,16 +203,6 @@ export const COUNTRY_BY_ID = Object.fromEntries(COUNTRIES.map((country) => [coun
 
 export const REGION_ORDER = ['アジア', 'ヨーロッパ', '北米', '南米', 'アフリカ', 'オセアニア'] as const;
 
-// 「行きたい国を追加」画面のおすすめに表示する国IDの固定リスト（地域順）
-export const RECOMMENDED_BUCKET_COUNTRY_IDS: readonly string[] = [
-  'kr', 'th', 'vn', 'sg', 'my', 'ph', 'cn', 'id',
-  'fr', 'it', 'es', 'gb', 'de', 'is', 'gr', 'tr',
-  'us', 'ca',
-  'br',
-  'eg', 'ma',
-  'au', 'nz',
-];
-
 export function searchCountries(query: string) {
   const normalized = query.trim().toLowerCase();
 
