@@ -2,10 +2,21 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Alert,
+  Modal,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
-import { AppScreen, EmptyState, PaperCard, PrimaryButton, useUndoToast } from '@/components';
+import { AppScreen, EmptyState, MemoSwipeRow, PaperCard, PrimaryButton, useUndoToast } from '@/components';
 import { FREE_PHOTO_LIMIT } from '@/constants';
 import { COUNTRY_BY_ID, MEMO_CARD_DEFINITIONS, getMemoDefinition } from '@/data';
 import { getCountrySummary, isCountryInBucket } from '@/features';
@@ -13,6 +24,12 @@ import { useTravel } from '@/hooks';
 import { formatDateSlash, fromISODate, pickAndStoreVisitPhotos, toISODate } from '@/lib';
 import { colors, radius, shadows, spacing } from '@/theme';
 import type { City, MemoCard, MemoType, Photo } from '@/types';
+
+const PHOTOS_PER_ROW = 3;
+const DEFAULT_PHOTO_ROWS = 3;
+const DEFAULT_PHOTO_LIMIT = PHOTOS_PER_ROW * DEFAULT_PHOTO_ROWS;
+
+type MemoFilter = 'all' | MemoType;
 
 export default function CountryDetailScreen() {
   const router = useRouter();
@@ -41,11 +58,31 @@ export default function CountryDetailScreen() {
 
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(summary?.visits[0]?.visit.id ?? null);
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);
+  const [isCityEditing, setCityEditing] = useState(false);
   const [cityDraft, setCityDraft] = useState('');
   const [isCityInputOpen, setCityInputOpen] = useState(false);
+  const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const [memoFilter, setMemoFilter] = useState<MemoFilter>('all');
   const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
   const [memoDraft, setMemoDraft] = useState('');
   const [isMemoPickerOpen, setMemoPickerOpen] = useState(false);
+
+  // メモ編集時に該当行をキーボード上にスクロールさせるための参照
+  const scrollViewRef = useRef<ScrollView | null>(null);
+  const memoRowRefs = useRef<Map<string, View>>(new Map());
+  const scrollOffsetRef = useRef(0);
+
+  const registerMemoRef = useCallback((memoId: string, node: View | null) => {
+    if (node) {
+      memoRowRefs.current.set(memoId, node);
+    } else {
+      memoRowRefs.current.delete(memoId);
+    }
+  }, []);
+
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
+  }, []);
 
   useEffect(() => {
     if (!selectedVisitId && summary?.visits[0]) {
@@ -60,11 +97,38 @@ export default function CountryDetailScreen() {
   // 訪問が切り替わったらインライン編集状態をリセット
   useEffect(() => {
     setDatePickerOpen(false);
+    setCityEditing(false);
     setCityDraft('');
     setCityInputOpen(false);
+    setShowAllPhotos(false);
+    setMemoFilter('all');
     setEditingMemoId(null);
     setMemoDraft('');
   }, [selectedVisit?.visit.id]);
+
+  // メモが編集状態になったら、その行をキーボードの上にスクロールさせる。
+  // 新アーキテクチャ（Fabric）では measureLayout の第1引数が厳しくなるため、
+  // measure() で screen Y を取り、現在のスクロールオフセットと組み合わせてスクロール先を計算する。
+  useEffect(() => {
+    if (!editingMemoId) return;
+    const scrollViewNode = scrollViewRef.current;
+    if (!scrollViewNode) return;
+
+    // 新規追加直後は layout が確定するまでに時間がかかるので少し待つ。
+    const timer = setTimeout(() => {
+      const rowNode = memoRowRefs.current.get(editingMemoId);
+      if (!rowNode || typeof rowNode.measure !== 'function') return;
+      rowNode.measure((_x, _y, _width, _height, _pageX, pageY) => {
+        // 行の上端を画面上部から 140px のあたりに置き、キーボード上に確実に見える位置にする。
+        const desiredScreenY = 140;
+        const delta = pageY - desiredScreenY;
+        const nextOffset = Math.max(0, scrollOffsetRef.current + delta);
+        scrollViewNode.scrollTo({ y: nextOffset, animated: true });
+      });
+    }, 180);
+
+    return () => clearTimeout(timer);
+  }, [editingMemoId]);
 
   const confirmDeleteVisit = useCallback(() => {
     if (!selectedVisit) return;
@@ -94,6 +158,21 @@ export default function CountryDetailScreen() {
       ],
     );
   }, [removeVisit, router, selectedVisit, summary]);
+
+  const openMoreMenu = useCallback(() => {
+    Alert.alert(
+      '操作',
+      undefined,
+      [
+        { text: 'キャンセル', style: 'cancel' },
+        {
+          text: 'この訪問記録を削除',
+          style: 'destructive',
+          onPress: confirmDeleteVisit,
+        },
+      ],
+    );
+  }, [confirmDeleteVisit]);
 
   const handleDateChange = useCallback(
     async (_event: DateTimePickerEvent, next?: Date) => {
@@ -163,7 +242,12 @@ export default function CountryDetailScreen() {
       if (result.uris.length === 0) return;
       await addPhotosToVisit(selectedVisit.visit.id, result.uris);
     } catch (caught) {
-      Alert.alert('写真を追加できませんでした', caught instanceof Error ? caught.message : 'もう一度お試しください。');
+      // 写真ピッカー〜保存までの失敗原因を後で追えるよう、警告ログを残しておく。
+      console.warn('[country] handlePickPhotos failed', caught);
+      Alert.alert(
+        '写真を追加できませんでした',
+        caught instanceof Error ? caught.message : 'もう一度お試しください。',
+      );
     }
   }, [addPhotosToVisit, isPremium, selectedVisit]);
 
@@ -204,6 +288,7 @@ export default function CountryDetailScreen() {
         setMemoPickerOpen(false);
         setEditingMemoId(created.id);
         setMemoDraft('');
+        setMemoFilter('all');
       } catch (caught) {
         Alert.alert('メモを追加できませんでした', caught instanceof Error ? caught.message : 'もう一度お試しください。');
       }
@@ -231,10 +316,14 @@ export default function CountryDetailScreen() {
   );
 
   const handleRemoveMemo = useCallback(
-    async (memo: MemoCard) => {
+    async (memo: MemoCard, close?: () => void) => {
       try {
         const removed = await removeMemo(memo.id);
-        if (!removed) return;
+        if (!removed) {
+          close?.();
+          return;
+        }
+        close?.();
         const definition = getMemoDefinition(removed.type);
         showUndoToast({
           label: `「${definition?.title ?? 'メモ'}」を削除しました`,
@@ -253,6 +342,12 @@ export default function CountryDetailScreen() {
     [removeMemo, restoreMemo, showUndoToast],
   );
 
+  const filteredMemos = useMemo(() => {
+    if (!selectedVisit) return [];
+    if (memoFilter === 'all') return selectedVisit.memos;
+    return selectedVisit.memos.filter((memo) => memo.type === memoFilter);
+  }, [memoFilter, selectedVisit]);
+
   if (!country) {
     return (
       <AppScreen>
@@ -262,13 +357,16 @@ export default function CountryDetailScreen() {
     );
   }
 
-  const availableMemoTypes = selectedVisit
-    ? MEMO_CARD_DEFINITIONS.filter((def) => !selectedVisit.memos.some((memo) => memo.type === def.type))
-    : MEMO_CARD_DEFINITIONS;
+  const hasOverflowPhotos = (selectedVisit?.photos.length ?? 0) > DEFAULT_PHOTO_LIMIT;
+  const visiblePhotos = selectedVisit
+    ? showAllPhotos
+      ? selectedVisit.photos
+      : selectedVisit.photos.slice(0, DEFAULT_PHOTO_LIMIT)
+    : [];
 
   return (
-    <AppScreen>
-      <TopBar />
+    <AppScreen scrollViewRef={scrollViewRef} onScroll={handleScroll}>
+      <TopBar onMore={summary ? openMoreMenu : undefined} />
       {!summary ? (
         <View style={styles.emptyBlock}>
           <PaperCard style={styles.countryInfo}>
@@ -292,52 +390,60 @@ export default function CountryDetailScreen() {
 
       {summary && selectedVisit ? (
         <>
-          <PaperCard style={styles.summaryCard}>
-            <Text style={styles.heroFlag}>{country.flag}</Text>
-            <View style={styles.summaryText}>
-              <Text selectable style={styles.countryName}>
-                {country.nameJa}
-              </Text>
-              <Text selectable style={styles.countryMeta}>
-                訪問回数 {summary.visitCount}回・最後に行った日 {formatDateSlash(summary.lastVisitedAt)}
-              </Text>
+          <PaperCard inset style={styles.summaryCard}>
+            <View style={styles.summaryHeaderRow}>
+              <Text style={styles.heroFlag}>{country.flag}</Text>
+              <View style={styles.summaryText}>
+                <Text selectable style={styles.countryName}>
+                  {country.nameJa}
+                </Text>
+                <Text selectable style={styles.countryMeta}>
+                  訪問回数 {summary.visitCount}回・最終訪問日 {formatDateSlash(summary.lastVisitedAt)}
+                </Text>
+              </View>
             </View>
-          </PaperCard>
-
-          <View style={styles.visitTabsRow}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.visitTabs} style={styles.visitTabsScroll}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.visitTabs}
+              style={styles.visitTabsScroll}
+            >
               {summary.visits.map((bundle, index) => {
                 const active = bundle.visit.id === selectedVisit.visit.id;
                 return (
                   <Pressable
                     key={bundle.visit.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${index + 1}回目 ${formatDateSlash(bundle.visit.visitedAt)}`}
+                    accessibilityState={{ selected: active }}
                     style={[styles.visitTab, active && styles.visitTabActive]}
                     onPress={() => setSelectedVisitId(bundle.visit.id)}
                   >
                     <Text selectable style={[styles.visitTabText, active && styles.visitTabTextActive]}>
                       {index + 1}回目
                     </Text>
+                    <Text selectable style={[styles.visitTabSubText, active && styles.visitTabSubTextActive]}>
+                      {formatDateSlash(bundle.visit.visitedAt)}
+                    </Text>
                   </Pressable>
                 );
               })}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="この国に新しい訪問を追加"
+                style={styles.addVisitPill}
+                onPress={() => router.push({ pathname: '/add', params: { countryId: country.id } })}
+              >
+                <Ionicons name="add" size={16} color={colors.accentTealDark} />
+                <Text selectable style={styles.addVisitText}>
+                  訪問を追加
+                </Text>
+              </Pressable>
             </ScrollView>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="この訪問記録を削除"
-              style={styles.trashButton}
-              onPress={confirmDeleteVisit}
-            >
-              <Ionicons name="trash-outline" size={20} color={colors.textPrimary} />
-            </Pressable>
-          </View>
+          </PaperCard>
 
           <PaperCard inset style={styles.visitInfoCard}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`訪問日 ${formatDateSlash(selectedVisit.visit.visitedAt)}  タップで編集`}
-              style={styles.infoLine}
-              onPress={() => setDatePickerOpen((prev) => !prev)}
-            >
+            <View style={styles.infoRow}>
               <Ionicons name="calendar-outline" size={18} color={colors.accentTealDark} />
               <Text selectable style={styles.infoLabel}>
                 訪問日
@@ -345,12 +451,20 @@ export default function CountryDetailScreen() {
               <Text selectable style={styles.infoValue}>
                 {formatDateSlash(selectedVisit.visit.visitedAt)}
               </Text>
-              <Ionicons
-                name={isDatePickerOpen ? 'chevron-up' : 'chevron-down'}
-                size={18}
-                color={colors.textMuted}
-              />
-            </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="訪問日を編集"
+                hitSlop={6}
+                style={styles.editIconButton}
+                onPress={() => setDatePickerOpen((prev) => !prev)}
+              >
+                <Ionicons
+                  name={isDatePickerOpen ? 'chevron-up' : 'pencil-outline'}
+                  size={16}
+                  color={colors.textMuted}
+                />
+              </Pressable>
+            </View>
             {isDatePickerOpen ? (
               <View style={styles.datePickerWrap}>
                 <DateTimePicker
@@ -366,167 +480,240 @@ export default function CountryDetailScreen() {
               </View>
             ) : null}
 
-            <View style={styles.cityBlock}>
-              <View style={styles.infoLine}>
-                <Ionicons name="location-outline" size={18} color={colors.accentTealDark} />
-                <Text selectable style={styles.infoLabel}>
-                  訪問都市
-                </Text>
-                <View style={styles.flexFiller} />
-              </View>
-              <View style={styles.chipWrap}>
-                {selectedVisit.cities.map((city) => (
-                  <View key={city.id} style={styles.chipWithDelete}>
-                    <Text selectable style={styles.chipText}>
-                      {city.name}
-                    </Text>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`${city.name} を削除`}
-                      style={styles.chipDelete}
-                      hitSlop={6}
-                      onPress={() => handleRemoveCity(city)}
-                    >
-                      <Ionicons name="close" size={12} color={colors.textPrimary} />
-                    </Pressable>
-                  </View>
-                ))}
-                {isCityInputOpen ? (
-                  <View style={styles.cityInputRow}>
-                    <TextInput
-                      value={cityDraft}
-                      onChangeText={setCityDraft}
-                      autoFocus
-                      placeholder="例: バンコク"
-                      style={styles.cityInput}
-                      returnKeyType="done"
-                      onSubmitEditing={handleAddCity}
-                      onBlur={handleAddCity}
-                    />
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="都市を追加"
-                      style={styles.cityCommit}
-                      onPress={handleAddCity}
-                    >
-                      <Ionicons name="checkmark" size={16} color={colors.white} />
-                    </Pressable>
-                  </View>
+            <View style={styles.divider} />
+
+            <View style={styles.infoRow}>
+              <Ionicons name="location-outline" size={18} color={colors.accentTealDark} />
+              <Text selectable style={styles.infoLabel}>
+                訪問都市
+              </Text>
+              <View style={styles.cityValueArea}>
+                {selectedVisit.cities.length === 0 && !isCityEditing ? (
+                  <Text selectable style={styles.cityEmptyInline}>
+                    未登録
+                  </Text>
                 ) : (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="都市を追加"
-                    style={styles.addCityPill}
-                    onPress={() => {
-                      setCityDraft('');
-                      setCityInputOpen(true);
-                    }}
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    style={styles.cityChipScroll}
+                    contentContainerStyle={styles.cityChipRow}
                   >
-                    <Ionicons name="add" size={14} color={colors.accentTealDark} />
-                    <Text selectable style={styles.addCityText}>
-                      都市を追加
-                    </Text>
-                  </Pressable>
+                    {selectedVisit.cities.map((city) =>
+                      isCityEditing ? (
+                        <View key={city.id} style={styles.chipWithDelete}>
+                          <Text selectable style={styles.chipText} numberOfLines={1}>
+                            {city.name}
+                          </Text>
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={`${city.name} を削除`}
+                            style={styles.chipDelete}
+                            hitSlop={6}
+                            onPress={() => handleRemoveCity(city)}
+                          >
+                            <Ionicons name="close" size={12} color={colors.textPrimary} />
+                          </Pressable>
+                        </View>
+                      ) : (
+                        <View key={city.id} style={styles.chip}>
+                          <Text selectable style={styles.chipText} numberOfLines={1}>
+                            {city.name}
+                          </Text>
+                        </View>
+                      ),
+                    )}
+                    {isCityEditing ? (
+                      isCityInputOpen ? (
+                        <View style={styles.cityInputRow}>
+                          <TextInput
+                            value={cityDraft}
+                            onChangeText={setCityDraft}
+                            autoFocus
+                            placeholder="例: バンコク"
+                            placeholderTextColor={colors.textMuted}
+                            style={styles.cityInput}
+                            returnKeyType="done"
+                            onSubmitEditing={handleAddCity}
+                            onBlur={handleAddCity}
+                          />
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="都市を追加"
+                            style={styles.cityCommit}
+                            onPress={handleAddCity}
+                          >
+                            <Ionicons name="checkmark" size={16} color={colors.white} />
+                          </Pressable>
+                        </View>
+                      ) : (
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel="都市を追加"
+                          style={styles.addCityPill}
+                          onPress={() => {
+                            setCityDraft('');
+                            setCityInputOpen(true);
+                          }}
+                        >
+                          <Ionicons name="add" size={14} color={colors.accentTealDark} />
+                          <Text selectable style={styles.addCityText}>
+                            都市を追加
+                          </Text>
+                        </Pressable>
+                      )
+                    ) : null}
+                  </ScrollView>
                 )}
               </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={isCityEditing ? '訪問都市の編集を終える' : '訪問都市を編集'}
+                hitSlop={6}
+                style={styles.editIconButton}
+                onPress={() => {
+                  if (isCityEditing) {
+                    setCityInputOpen(false);
+                    setCityDraft('');
+                  }
+                  setCityEditing((prev) => !prev);
+                }}
+              >
+                <Ionicons
+                  name={isCityEditing ? 'checkmark' : 'pencil-outline'}
+                  size={16}
+                  color={isCityEditing ? colors.accentTealDark : colors.textMuted}
+                />
+              </Pressable>
             </View>
           </PaperCard>
 
-          <View style={styles.section}>
-            <Text selectable style={styles.sectionTitle}>
-              写真
-            </Text>
-            <View style={styles.photoGrid}>
-              {selectedVisit.photos.map((photo) => (
-                <View key={photo.id} style={styles.photoTile}>
-                  <Image source={{ uri: photo.uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="写真を削除"
-                    style={styles.photoDelete}
-                    hitSlop={6}
-                    onPress={() => handleRemovePhoto(photo)}
-                  >
-                    <Ionicons name="close" size={14} color={colors.textPrimary} />
-                  </Pressable>
-                </View>
-              ))}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="写真を追加"
-                style={styles.addPhotoTile}
-                onPress={handlePickPhotos}
-              >
-                <Ionicons name="add" size={28} color={colors.accentTealDark} />
-                <Text selectable style={styles.addPhotoLabel}>
-                  写真を追加
+          <PaperCard inset style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Ionicons name="image-outline" size={18} color={colors.textPrimary} />
+                <Text selectable style={styles.sectionTitle}>
+                  写真
                 </Text>
-              </Pressable>
+              </View>
+              {hasOverflowPhotos ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={showAllPhotos ? '写真の表示を折りたたむ' : 'すべての写真を見る'}
+                  hitSlop={6}
+                  onPress={() => setShowAllPhotos((prev) => !prev)}
+                >
+                  <Text selectable style={styles.seeAllText}>
+                    {showAllPhotos ? '折りたたむ' : `すべてを見る ›`}
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
-          </View>
+            {visiblePhotos.length > 0 ? (
+              <View style={styles.photoGrid}>
+                {visiblePhotos.map((photo) => (
+                  <View key={photo.id} style={styles.photoTile}>
+                    <Image source={{ uri: photo.uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="写真を削除"
+                      style={styles.photoDelete}
+                      hitSlop={6}
+                      onPress={() => handleRemovePhoto(photo)}
+                    >
+                      <Ionicons name="close" size={14} color={colors.textPrimary} />
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="写真を追加"
+              style={styles.addPhotoButton}
+              onPress={handlePickPhotos}
+            >
+              <Ionicons name="add" size={18} color={colors.accentTealDark} />
+              <Text selectable style={styles.addPhotoLabel}>
+                写真を追加
+              </Text>
+            </Pressable>
+          </PaperCard>
 
-          <View style={styles.section}>
-            <Text selectable style={styles.sectionTitle}>
-              メモカード
-            </Text>
-            <View style={styles.memoList}>
-              {selectedVisit.memos.map((memo) => {
-                const definition = getMemoDefinition(memo.type);
-                const isEditing = editingMemoId === memo.id;
-                return (
-                  <PaperCard key={memo.id} inset style={styles.memoCard}>
-                    <View style={styles.memoHeader}>
-                      <Text selectable style={styles.memoTitle}>
-                        {definition?.icon ?? '📝'} {definition?.title ?? memo.type}
-                      </Text>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={`${definition?.title ?? 'メモ'} を削除`}
-                        style={styles.memoDelete}
-                        hitSlop={6}
-                        onPress={() => handleRemoveMemo(memo)}
-                      >
-                        <Ionicons name="close" size={14} color={colors.textPrimary} />
-                      </Pressable>
-                    </View>
-                    {isEditing ? (
-                      <TextInput
-                        value={memoDraft}
-                        onChangeText={setMemoDraft}
-                        autoFocus
-                        multiline
-                        maxLength={300}
-                        placeholder={definition?.placeholder ?? 'メモを入力'}
-                        style={styles.memoInput}
-                        textAlignVertical="top"
-                        onBlur={() => handleSaveMemo(memo)}
-                      />
-                    ) : (
-                      <Pressable accessibilityRole="button" accessibilityLabel="メモを編集" onPress={() => beginEditMemo(memo)}>
-                        <Text selectable style={memo.content ? styles.memoContent : styles.memoEmpty}>
-                          {memo.content || 'タップして入力'}
-                        </Text>
-                      </Pressable>
-                    )}
-                  </PaperCard>
-                );
-              })}
+          <PaperCard inset style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Ionicons name="document-text-outline" size={18} color={colors.textPrimary} />
+                <Text selectable style={styles.sectionTitle}>
+                  メモ
+                </Text>
+              </View>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="メモを追加"
-                style={[styles.addMemoButton, availableMemoTypes.length === 0 && styles.addMemoButtonDisabled]}
-                disabled={availableMemoTypes.length === 0}
+                hitSlop={6}
+                style={styles.addMemoChip}
                 onPress={() => setMemoPickerOpen(true)}
               >
-                <Ionicons name="add" size={18} color={colors.accentTealDark} />
-                <Text selectable style={styles.addMemoText}>
-                  {availableMemoTypes.length === 0 ? '追加できるメモがありません' : 'メモを追加'}
+                <Ionicons name="add" size={14} color={colors.accentTealDark} />
+                <Text selectable style={styles.addMemoChipText}>
+                  メモを追加
                 </Text>
               </Pressable>
             </View>
-          </View>
 
-          <PrimaryButton label="この国に新しい訪問を追加" onPress={() => router.push({ pathname: '/add', params: { countryId: country.id } })} />
+            <Text selectable style={styles.filterLabel}>
+              フィルター
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterRow}
+              style={styles.filterScroll}
+            >
+              <FilterChip
+                label="すべて"
+                active={memoFilter === 'all'}
+                onPress={() => setMemoFilter('all')}
+              />
+              {MEMO_CARD_DEFINITIONS.map((def) => (
+                <FilterChip
+                  key={def.type}
+                  icon={def.icon}
+                  label={def.title}
+                  active={memoFilter === def.type}
+                  onPress={() => setMemoFilter(def.type)}
+                />
+              ))}
+            </ScrollView>
+
+            {filteredMemos.length > 0 ? (
+              <View style={styles.memoList}>
+                {filteredMemos.map((memo) => (
+                  <MemoSwipeRow
+                    key={memo.id}
+                    memo={memo}
+                    isEditing={editingMemoId === memo.id}
+                    draft={memoDraft}
+                    onStartEdit={beginEditMemo}
+                    onChangeDraft={setMemoDraft}
+                    onSaveEdit={handleSaveMemo}
+                    onConfirmDelete={(target, close) => handleRemoveMemo(target, close)}
+                    registerRef={registerMemoRef}
+                  />
+                ))}
+              </View>
+            ) : (
+              <View style={styles.memoEmptyBlock}>
+                <Text selectable style={styles.memoEmptyText}>
+                  {memoFilter === 'all'
+                    ? 'まだメモがありません。右上の「メモを追加」から記録できます。'
+                    : 'このタグのメモはまだありません。'}
+                </Text>
+              </View>
+            )}
+          </PaperCard>
 
           <Modal visible={isMemoPickerOpen} animationType="slide" transparent onRequestClose={() => setMemoPickerOpen(false)}>
             <Pressable style={styles.modalBackdrop} onPress={() => setMemoPickerOpen(false)}>
@@ -535,26 +722,20 @@ export default function CountryDetailScreen() {
                 <Text selectable style={styles.modalTitle}>
                   追加するメモを選ぶ
                 </Text>
-                {availableMemoTypes.length === 0 ? (
-                  <Text selectable style={styles.modalEmpty}>
-                    すべてのメモカードを追加済みです。
-                  </Text>
-                ) : (
-                  <View style={styles.memoTypeGrid}>
-                    {availableMemoTypes.map((def) => (
-                      <Pressable
-                        key={def.type}
-                        style={styles.memoTypeTile}
-                        onPress={() => handleAddMemo(def.type)}
-                      >
-                        <Text style={styles.memoTypeIcon}>{def.icon}</Text>
-                        <Text selectable style={styles.memoTypeText}>
-                          {def.title}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                )}
+                <View style={styles.memoTypeGrid}>
+                  {MEMO_CARD_DEFINITIONS.map((def) => (
+                    <Pressable
+                      key={def.type}
+                      style={styles.memoTypeTile}
+                      onPress={() => handleAddMemo(def.type)}
+                    >
+                      <Text style={styles.memoTypeIcon}>{def.icon}</Text>
+                      <Text selectable style={styles.memoTypeText}>
+                        {def.title}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
                 <Pressable
                   accessibilityRole="button"
                   style={styles.modalCancel}
@@ -571,15 +752,45 @@ export default function CountryDetailScreen() {
   );
 }
 
-function TopBar() {
+function TopBar({ onMore }: { onMore?: () => void }) {
   const router = useRouter();
 
   return (
     <View style={styles.topBar}>
-      <Pressable accessibilityRole="button" accessibilityLabel="戻る" style={styles.backButton} onPress={() => router.back()}>
+      <Pressable accessibilityRole="button" accessibilityLabel="戻る" style={styles.iconButton} onPress={() => router.back()}>
         <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
       </Pressable>
+      <View style={styles.flexFiller} />
+      {onMore ? (
+        <Pressable accessibilityRole="button" accessibilityLabel="その他の操作" style={styles.iconButton} onPress={onMore}>
+          <Ionicons name="ellipsis-horizontal" size={22} color={colors.textPrimary} />
+        </Pressable>
+      ) : null}
     </View>
+  );
+}
+
+type FilterChipProps = {
+  label: string;
+  active: boolean;
+  icon?: string;
+  onPress: () => void;
+};
+
+function FilterChip({ label, active, icon, onPress }: FilterChipProps) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${label}で絞り込む`}
+      accessibilityState={{ selected: active }}
+      style={[styles.filterChip, active && styles.filterChipActive]}
+      onPress={onPress}
+    >
+      {icon ? <Text style={styles.filterChipIcon}>{icon}</Text> : null}
+      <Text selectable style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -589,7 +800,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: 42,
   },
-  backButton: {
+  iconButton: {
     width: 42,
     height: 42,
     alignItems: 'center',
@@ -607,6 +818,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   summaryCard: {
+    gap: spacing.md,
+  },
+  summaryHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
@@ -628,44 +842,30 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
   },
-  visitTabsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
   visitTabsScroll: {
-    flex: 1,
+    marginHorizontal: -spacing.lg,
   },
   visitTabs: {
     gap: spacing.sm,
-    paddingRight: spacing.sm,
-  },
-  trashButton: {
-    width: 38,
-    height: 38,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 19,
-    backgroundColor: colors.paper,
-    borderColor: colors.border,
-    borderWidth: 1,
-    boxShadow: shadows.soft,
+    paddingHorizontal: spacing.lg,
   },
   visitTab: {
-    minWidth: 72,
-    minHeight: 38,
+    minWidth: 92,
+    minHeight: 56,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
-    borderRadius: radius.round,
+    paddingVertical: 6,
+    gap: 2,
+    borderRadius: radius.lg,
     borderColor: colors.border,
     borderWidth: 1,
     backgroundColor: colors.paper,
     boxShadow: shadows.soft,
   },
   visitTabActive: {
-    backgroundColor: colors.accentGold,
-    borderColor: '#8C5E1D',
+    backgroundColor: colors.accentTealDark,
+    borderColor: colors.accentTealDark,
   },
   visitTabText: {
     color: colors.textPrimary,
@@ -675,10 +875,36 @@ const styles = StyleSheet.create({
   visitTabTextActive: {
     color: colors.white,
   },
+  visitTabSubText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  visitTabSubTextActive: {
+    color: 'rgba(255, 255, 255, 0.86)',
+  },
+  addVisitPill: {
+    minHeight: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.accentTealDark,
+    backgroundColor: 'rgba(47, 155, 145, 0.08)',
+  },
+  addVisitText: {
+    color: colors.accentTealDark,
+    fontSize: 13,
+    fontWeight: '800',
+  },
   visitInfoCard: {
     gap: spacing.md,
   },
-  infoLine: {
+  infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -695,6 +921,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
   },
+  editIconButton: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    borderColor: colors.border,
+    borderWidth: 1,
+  },
   flexFiller: {
     flex: 1,
   },
@@ -704,20 +940,45 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: 'rgba(255, 250, 238, 0.55)',
   },
-  cityBlock: {
-    gap: spacing.sm,
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+    opacity: 0.6,
   },
-  chipWrap: {
+  cityValueArea: {
+    flex: 1,
+    minWidth: 0,
+    overflow: 'hidden',
+  },
+  cityEmptyInline: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontStyle: 'italic',
+  },
+  cityChipScroll: {
+    flexGrow: 0,
+  },
+  cityChipRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingRight: spacing.xs,
+  },
+  chip: {
+    minHeight: 26,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    borderRadius: radius.round,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.paper,
   },
   chipWithDelete: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    minHeight: 32,
-    paddingLeft: spacing.md,
+    gap: 4,
+    minHeight: 28,
+    paddingLeft: 10,
     paddingRight: 4,
     borderRadius: radius.round,
     borderWidth: 1,
@@ -726,23 +987,23 @@ const styles = StyleSheet.create({
   },
   chipText: {
     color: colors.textPrimary,
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
   },
   chipDelete: {
-    width: 22,
-    height: 22,
+    width: 20,
+    height: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 11,
+    borderRadius: 10,
     backgroundColor: 'rgba(84, 55, 21, 0.10)',
   },
   addCityPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    minHeight: 32,
-    paddingHorizontal: spacing.md,
+    minHeight: 28,
+    paddingHorizontal: 10,
     borderRadius: radius.round,
     borderWidth: 1,
     borderStyle: 'dashed',
@@ -751,7 +1012,7 @@ const styles = StyleSheet.create({
   },
   addCityText: {
     color: colors.accentTealDark,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
   },
   cityInputRow: {
@@ -760,32 +1021,48 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   cityInput: {
-    minWidth: 120,
-    minHeight: 36,
-    paddingHorizontal: spacing.md,
+    minWidth: 100,
+    minHeight: 30,
+    paddingHorizontal: spacing.sm,
     borderRadius: radius.round,
     borderWidth: 1,
     borderColor: colors.accentTealDark,
     backgroundColor: colors.white,
     color: colors.textPrimary,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
   },
   cityCommit: {
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
+    borderRadius: 14,
     backgroundColor: colors.accentTealDark,
   },
   section: {
     gap: spacing.md,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   sectionTitle: {
     color: colors.textPrimary,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '900',
+  },
+  seeAllText: {
+    color: colors.accentTealDark,
+    fontSize: 13,
+    fontWeight: '800',
   },
   photoGrid: {
     flexDirection: 'row',
@@ -793,7 +1070,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   photoTile: {
-    width: '31%',
+    width: '31.5%',
     aspectRatio: 1,
     overflow: 'hidden',
     borderRadius: radius.md,
@@ -814,12 +1091,12 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderWidth: 1,
   },
-  addPhotoTile: {
-    width: '31%',
-    aspectRatio: 1,
+  addPhotoButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: spacing.xs,
+    minHeight: 44,
     borderRadius: radius.md,
     borderWidth: 1,
     borderStyle: 'dashed',
@@ -828,77 +1105,79 @@ const styles = StyleSheet.create({
   },
   addPhotoLabel: {
     color: colors.accentTealDark,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  addMemoChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minHeight: 32,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.round,
+    borderWidth: 1,
+    borderColor: colors.accentTealDark,
+    backgroundColor: 'rgba(47, 155, 145, 0.08)',
+  },
+  addMemoChipText: {
+    color: colors.accentTealDark,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  filterLabel: {
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: '800',
   },
-  memoList: {
-    gap: spacing.md,
+  filterScroll: {
+    marginHorizontal: -spacing.lg,
   },
-  memoCard: {
+  filterRow: {
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 34,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.round,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.paper,
+  },
+  filterChipActive: {
+    backgroundColor: colors.accentTealDark,
+    borderColor: colors.accentTealDark,
+  },
+  filterChipIcon: {
+    fontSize: 14,
+  },
+  filterChipText: {
+    color: colors.textPrimary,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  filterChipTextActive: {
+    color: colors.white,
+  },
+  memoList: {
     gap: spacing.sm,
   },
-  memoHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  memoTitle: {
-    flex: 1,
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  memoDelete: {
-    width: 26,
-    height: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 13,
-    backgroundColor: 'rgba(84, 55, 21, 0.10)',
-  },
-  memoContent: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  memoEmpty: {
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 22,
-    fontStyle: 'italic',
-  },
-  memoInput: {
-    minHeight: 80,
+  memoEmptyBlock: {
+    paddingVertical: spacing.lg,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.accentTealDark,
-    backgroundColor: colors.white,
-    color: colors.textPrimary,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  addMemoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    minHeight: 48,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.accentTealDark,
-    backgroundColor: 'rgba(47, 155, 145, 0.06)',
-  },
-  addMemoButtonDisabled: {
     borderColor: colors.border,
-    backgroundColor: 'rgba(84, 55, 21, 0.04)',
+    backgroundColor: 'rgba(255, 250, 238, 0.6)',
   },
-  addMemoText: {
-    color: colors.accentTealDark,
-    fontSize: 14,
-    fontWeight: '800',
+  memoEmptyText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
   },
   modalBackdrop: {
     flex: 1,
@@ -926,11 +1205,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
     textAlign: 'center',
-  },
-  modalEmpty: {
-    textAlign: 'center',
-    color: colors.textSecondary,
-    fontSize: 14,
   },
   memoTypeGrid: {
     flexDirection: 'row',

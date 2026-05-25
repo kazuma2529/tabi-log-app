@@ -24,10 +24,26 @@ async function ensurePhotoDir() {
   }
 }
 
-function getExtension(uri: string) {
-  const cleanUri = uri.split('?')[0] ?? uri;
-  const extension = cleanUri.split('.').pop();
-  return extension && extension.length <= 5 ? extension : 'jpg';
+const KNOWN_IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'heic', 'heif', 'webp', 'gif']);
+
+function normalizeExtension(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const ext = raw.toLowerCase();
+  if (!KNOWN_IMAGE_EXTENSIONS.has(ext)) return null;
+  return ext === 'jpeg' ? 'jpg' : ext;
+}
+
+function getExtensionFromAsset(asset: ImagePicker.ImagePickerAsset): string {
+  const candidates: (string | null | undefined)[] = [
+    asset.fileName?.split('.').pop(),
+    asset.mimeType?.split('/').pop(),
+    asset.uri.split('?')[0].split('#')[0].split('.').pop(),
+  ];
+  for (const raw of candidates) {
+    const normalized = normalizeExtension(raw);
+    if (normalized) return normalized;
+  }
+  return 'jpg';
 }
 
 /**
@@ -111,10 +127,17 @@ export async function pickAndStoreVisitPhotos(currentCount: number, isPremium: b
   const photoDir = getPhotoDir();
 
   for (const [index, asset] of result.assets.entries()) {
-    const extension = getExtension(asset.uri);
+    const extension = getExtensionFromAsset(asset);
     const filename = `${Date.now()}-${index}.${extension}`;
     const target = `${photoDir}${filename}`;
     await FileSystem.copyAsync({ from: asset.uri, to: target });
+
+    // 保存後に実ファイルが存在するか検証する。失敗していれば原因が分かるよう明示的に投げる。
+    const info = await FileSystem.getInfoAsync(target);
+    if (!info.exists) {
+      throw new Error(`写真の保存に失敗しました（${asset.fileName ?? asset.uri}）`);
+    }
+
     storedAbsoluteUris.push(target);
   }
 

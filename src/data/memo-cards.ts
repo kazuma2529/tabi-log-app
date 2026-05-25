@@ -9,7 +9,7 @@ export const MEMO_CARD_DEFINITIONS: {
   {
     type: 'learned',
     title: '現地で学んだこと',
-    icon: '📜',
+    icon: '📖',
     placeholder: '現地で知った習慣、言葉、考え方など',
   },
   {
@@ -21,13 +21,13 @@ export const MEMO_CARD_DEFINITIONS: {
   {
     type: 'culture_shock',
     title: 'カルチャーショック',
-    icon: '🎟️',
+    icon: '😯',
     placeholder: '日本との違いに驚いたこと',
   },
   {
     type: 'free_note',
     title: '自由メモ',
-    icon: '📝',
+    icon: '✏️',
     placeholder: '残しておきたいことを自由に',
   },
   {
@@ -39,7 +39,7 @@ export const MEMO_CARD_DEFINITIONS: {
   {
     type: 'next_time',
     title: '次回やりたいこと',
-    icon: '📍',
+    icon: '⭐',
     placeholder: '次に行くならやりたいこと',
   },
 ];

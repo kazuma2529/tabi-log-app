@@ -1,8 +1,8 @@
 export const colors = {
   background: '#F7EEDC',
   backgroundSky: '#BDE3E8',
-  backgroundSoft: '#FFF8EA',
-  paper: '#FFF5E2',
+  backgroundSoft: '#FCF8F0',
+  paper: '#FAF6EC',
   paperDeep: '#F1DDB8',
   paperLine: '#DEC797',
   textPrimary: '#352310',

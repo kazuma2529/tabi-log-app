@@ -4,6 +4,7 @@ export * from './country-photo-card';
 export * from './country-row';
 export * from './donut-chart';
 export * from './empty-state';
+export * from './memo-swipe-row';
 export * from './paper-card';
 export * from './primary-button';
 export * from './progress-bar';

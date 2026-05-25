@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     gap: 0,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    backgroundColor: 'rgba(255, 248, 232, 0.94)',
+    backgroundColor: colors.backgroundSoft,
   },
   rowWrap: {
     gap: 0,

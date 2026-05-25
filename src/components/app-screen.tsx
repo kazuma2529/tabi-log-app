@@ -1,5 +1,14 @@
-import type { ReactNode } from 'react';
-import { ImageBackground, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
+import type { ReactNode, RefObject } from 'react';
+import {
+  ImageBackground,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type ImageSourcePropType,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, G, Line, Path, Rect } from 'react-native-svg';
 
@@ -15,6 +24,9 @@ type AppScreenProps = {
   backgroundImage?: ImageSourcePropType;
   variant?: 'paper' | 'sky' | 'diary';
   headerAlign?: 'left' | 'center';
+  scrollViewRef?: RefObject<ScrollView | null>;
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  scrollEventThrottle?: number;
 };
 
 export function AppScreen({
@@ -27,6 +39,9 @@ export function AppScreen({
   backgroundImage,
   variant,
   headerAlign = 'left',
+  scrollViewRef,
+  onScroll,
+  scrollEventThrottle = 16,
 }: AppScreenProps) {
   const insets = useSafeAreaInsets();
   const screenVariant = variant ?? (sky ? 'sky' : 'paper');
@@ -37,8 +52,14 @@ export function AppScreen({
     <View style={[styles.root, isSky && styles.skyRoot, isDiary && styles.diaryRoot]}>
       <TravelBackdrop variant={screenVariant} backgroundImage={backgroundImage} />
       <ScrollView
+        ref={scrollViewRef}
         contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={scrollEventThrottle}
         contentContainerStyle={[
           styles.content,
           isDiary && styles.diaryContent,
