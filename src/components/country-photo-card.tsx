@@ -13,7 +13,9 @@ type CountryPhotoCardProps = Omit<PressableProps, 'style'> & {
 
 export function CountryPhotoCard({ summary, compact = false, style, ...props }: CountryPhotoCardProps) {
   const latestVisit = summary.visits[summary.visits.length - 1];
-  const photo = latestVisit?.photos[0];
+  // 最新訪問に写真がなければ、新しい順に遡って「写真がある訪問」の 1 枚目を採用する。
+  // どの訪問にも写真が無い場合は undefined のままで、呼び出し側で国旗フォールバックさせる。
+  const photo = [...summary.visits].reverse().flatMap((bundle) => bundle.photos)[0];
   const cityText = latestVisit?.cities.map((city) => city.name).join('、');
 
   return (
@@ -31,8 +33,9 @@ export function CountryPhotoCard({ summary, compact = false, style, ...props }: 
         <Text selectable style={styles.name} numberOfLines={1}>
           {summary.country.nameJa}
         </Text>
+        {/* 都市が未登録のときは無理に日付を表示せず、空白行で高さだけ保つ。 */}
         <Text selectable style={styles.meta} numberOfLines={1}>
-          {cityText || formatDateSlash(summary.lastVisitedAt)}
+          {cityText || '\u00A0'}
         </Text>
         <Text selectable style={styles.date}>
           {formatDateSlash(summary.lastVisitedAt)}

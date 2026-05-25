@@ -15,7 +15,7 @@ export function StepMemoPick({ selectedMemoTypes, onToggleMemo, onNext }: StepMe
   return (
     <View style={styles.block}>
       <Text selectable style={styles.helper}>
-        記録したい内容だけ選んでください。何も選ばなくても保存できます。
+        記録したい内容だけ選んでください。{'\n'}何も選ばなくても保存できます。
       </Text>
       <View style={styles.memoGrid}>
         {MEMO_CARD_DEFINITIONS.map((memo) => {

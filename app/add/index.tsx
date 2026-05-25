@@ -1,4 +1,4 @@
-import { AppScreen, CloseIconButton } from '@/components';
+import { AppScreen, BackIconButton, CloseIconButton } from '@/components';
 
 import { StepDots } from './_components/step-dots';
 import { STEP_TITLES } from './_constants';
@@ -48,10 +48,13 @@ export default function AddVisitScreen() {
     close,
   } = form;
 
+  const canGoBack = step >= 1 && step <= 4;
+
   return (
     <AppScreen
       title={STEP_TITLES[step]}
       subtitle={`訪問記録の追加 ${Math.min(step + 1, STEP_TITLES.length)} / ${STEP_TITLES.length}`}
+      left={canGoBack ? <BackIconButton onPress={() => setStep(step - 1)} /> : undefined}
       right={<CloseIconButton onPress={close} />}
     >
       <StepDots step={step} />

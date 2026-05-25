@@ -85,9 +85,14 @@ export function StepDetails({
         ) : null}
       </View>
       <View style={styles.field}>
-        <Text selectable style={styles.fieldLabel}>
-          訪問した都市（複数可）
-        </Text>
+        <View style={styles.cityLabelRow}>
+          <Text selectable style={styles.fieldLabel}>
+            訪問した都市（複数可）
+          </Text>
+          <Text selectable style={styles.optionalHint}>
+            任意
+          </Text>
+        </View>
         <View style={styles.cityInputRow}>
           <TextInput
             value={cityInput}
@@ -148,6 +153,21 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 14,
     fontWeight: '800',
+  },
+  cityLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  optionalHint: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.round,
+    backgroundColor: 'rgba(120, 110, 95, 0.06)',
+    overflow: 'hidden',
   },
   input: {
     minHeight: 50,

@@ -58,6 +58,26 @@ RevenueCat、App Store 申請、EAS Build、本番課金設定などの初めて
 - 課金状態は最初は開発用の仮フラグで扱い、最後に RevenueCat へ差し替える。
 - RevenueCat が必要になるまでは Expo Go で確認できる範囲を優先する。
 
+### 1.3 課金モデル
+
+`docs/requirements.md` 5章で定義されている通り、以下の課金モデルを採用する。Phase 13 以降の実装はすべてこの前提に従う。
+
+- 種別：買い切り（非消耗型 / Non-Consumable）
+- 価格：1,480円
+- 解放する機能：以下の 2 つのみ
+  1. 写真無制限（無料版は1訪問10枚まで）
+  2. 年別分析機能
+- サブスクリプション、消耗型課金、広告、外部決済は導入しない。
+- 復元ボタンは必須。買い切りのため、機種変更や再インストール時に必ず復元できることを保証する。
+- 一度購入したら永続的に有効。アプリ側で期限管理は持たない。
+
+実装上の含意：
+
+- App Store Connect では「非消耗型 In-App Purchase」として課金商品を 1 つだけ登録する。
+- RevenueCat の Entitlement は `premium` 1 種類だけで足りる。
+- 想定 Product ID：`com.tabilog.premium`（最終的な Bundle ID 確定時に合わせて調整）。
+- アプリ内で課金状態を参照する箇所は `isPremium`（boolean）に集約する。
+
 ---
 
 ## 2. フェーズ別実装計画
@@ -400,17 +420,21 @@ images/
 
 目的：RevenueCat の前に、有料機能の画面と制御だけ先に作る。
 
+このフェーズの `isPremium` は、最終的に「買い切り 1,480円 を購入済みかどうか」を表す（`1.3 課金モデル` 参照）。Phase 15 で差し替えやすくするため、判定ロジックを 1 か所に集約することを最優先する。
+
 - [ ] 開発用の `isPremium` フラグを用意する。
+- [ ] `isPremium` の取得元を 1 か所に集約する（例：`src/lib/premium.ts` の `usePremium()` フック）。画面側は値だけを参照し、後で中身を RevenueCat に差し替えるだけで済む構造にする。
 - [ ] `isPremium = false` のとき、写真は1訪問10枚までにする。
 - [ ] `isPremium = true` のとき、写真を無制限扱いにする。
 - [ ] 年別分析を `isPremium = true` のときだけ表示する。
 - [ ] 年別分析のロック画面を作る。
+- [ ] 写真上限到達時のアップグレード案内に「買い切り 1,480円で写真無制限と年別分析が解放」と明示する（`docs/requirements.md` 13.4 参照）。
 - [ ] 購入ボタンと復元ボタンは、この段階では見た目だけ用意する。
 
 完了条件：
 
 - 課金なしでも、有料機能の出し分けが確認できる。
-- 後から RevenueCat に差し替えやすい構造になっている。
+- 後から RevenueCat に差し替えやすい構造になっている（`usePremium()` の中身だけ差し替えれば済む）。
 
 ---
 
@@ -438,23 +462,37 @@ images/
 
 目的：開発用フラグを本物の課金状態へ差し替える。
 
-このフェーズは、アプリ本体の主要機能が完成してから行う。
+このフェーズは、アプリ本体の主要機能が完成してから行う。課金モデルは `1.3 課金モデル` の通り、買い切り 1,480円の非消耗型 1 商品のみ。
 
-- [ ] Apple Developer Program の準備状況を確認する。
-- [ ] App Store Connect でアプリ、Bundle ID、アプリ内課金商品を設定する。
-- [ ] RevenueCat アカウントを作成する。
-- [ ] RevenueCat で iOS アプリと entitlement を設定する。
-- [ ] Expo Development Build / EAS Build の準備をする。
-- [ ] RevenueCat SDK を導入する。
-- [ ] 購入処理を実装する。
-- [ ] 復元処理を実装する。
-- [ ] RevenueCat の状態を正として `purchases` テーブルにキャッシュする。
-- [ ] 写真無制限と年別分析の判定を RevenueCat ベースへ切り替える。
+事前準備（コードに触る前にやっておく）：
+
+- [ ] Apple Developer Program に登録する（年 $99、審査に数日かかる場合があるため Phase 14 中に着手する）。
+- [ ] App Store Connect にアプリを新規登録する（Bundle ID 確定、アプリ名、SKU）。
+- [ ] App Store Connect で **非消耗型（Non-Consumable）** の課金商品を 1 つ作成する。
+  - Product ID（想定：`com.tabilog.premium`）
+  - 表示名と説明文（例：「写真無制限 + 年別分析」）
+  - 価格 Tier：1,480円相当
+- [ ] App Store Connect で App-Specific Shared Secret を発行する。
+- [ ] RevenueCat アカウントを作成し、iOS アプリを登録する。Shared Secret も登録する。
+- [ ] RevenueCat に上記 Product を登録し、Entitlement `premium` に紐づける。
+- [ ] Offering を 1 つ作り、上記 Product を Package として登録する。
+
+実装：
+
+- [ ] Expo Development Build / EAS Build を準備する（RevenueCat SDK はネイティブモジュールを含むため Expo Go では動かない）。
+- [ ] `react-native-purchases` を導入する。
+- [ ] アプリ起動時に `Purchases.configure({ apiKey })` で初期化する。
+- [ ] `Purchases.getCustomerInfo()` で Entitlement `premium` のアクティブ状態を取得する。
+- [ ] Phase 13 で作った `usePremium()` の中身を RevenueCat ベースに差し替える（呼び出し側は変更不要）。
+- [ ] 購入処理を実装する（`Purchases.getOfferings()` → `Purchases.purchasePackage()`）。
+- [ ] 復元処理を実装する（`Purchases.restorePurchases()`）。買い切りなので機種変更・再インストール時に必須。
+- [ ] RevenueCat の状態を正として `purchases` テーブルにキャッシュし、起動直後のオフライン表示が破綻しないようにする。
 
 完了条件：
 
-- 購入後、有料機能が解放される。
-- 復元ボタンで購入状態を復元できる。
+- 買い切り 1,480円の商品を Sandbox で購入できる。
+- 購入後、写真の11枚目以降が追加でき、年別分析が開ける。
+- アプリを再インストールしてから「復元」ボタンを押すと、有料機能が再度解放される。
 - RevenueCat が取得できない場合でも、ローカルキャッシュにより最低限の表示が破綻しない。
 
 ---
@@ -463,21 +501,35 @@ images/
 
 目的：配信に向けた最終準備を行う。
 
-- [ ] アプリアイコンを用意する。
+アセットと設定：
+
+- [ ] アプリアイコンを用意する（1024×1024 を基準に Expo が展開）。
 - [ ] スプラッシュ画面を用意する。
-- [ ] アプリ名、Bundle ID、バージョンを設定する。
-- [ ] 写真アクセス権限の説明文を設定する。
+- [ ] アプリ名、Bundle ID、バージョン、ビルド番号を `app.json` / `app.config.ts` で確定する。
+- [ ] 写真アクセス権限の説明文（`NSPhotoLibraryUsageDescription`）を `app.json` に日本語で設定する。例：「訪問した国の思い出写真をアプリに保存するために使用します」。
+- [ ] プライバシーポリシーを公開し URL を控える（写真ライブラリにアクセスするため申請時に必須）。
 - [ ] iCloud バックアップ対象としてデータが保持されることを確認する。
-- [ ] EAS Build で iOS ビルドを作成する。
+
+ビルドと実機確認：
+
+- [ ] EAS Build で iOS 本番ビルドを作成する。
 - [ ] 実機で主要フローを確認する。
-- [ ] TestFlight で確認する。
-- [ ] App Store 用スクリーンショットを準備する。
+- [ ] TestFlight にアップロードし、自分の実機で Sandbox 課金テストを行う。
+  - 購入 → 写真の11枚目以降が追加できる / 年別分析が開ける
+  - アプリ再インストール → 復元ボタンで状態が戻る
+
+申請準備：
+
+- [ ] App Store 用スクリーンショット（Apple 指定サイズ）を準備する。
 - [ ] App Store 申請情報を準備する。
+  - アプリ説明文、キーワード、サポート URL、プライバシーポリシー URL
+  - 課金商品の表示名と説明文（「買い切り 1,480円で写真無制限と年別分析を解放」と明記）
+  - App Review 用メモに、買い切り商品の購入導線と復元手順を簡潔に書く
 
 完了条件：
 
 - 実機で主要機能が動く。
-- 課金の sandbox テストができる。
+- 買い切り 1,480円の課金の Sandbox テストが通る（購入・再インストール後の復元を含む）。
 - App Store 提出に必要な情報が揃う。
 
 ---

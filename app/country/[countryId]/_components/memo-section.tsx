@@ -105,7 +105,7 @@ export function MemoSection({
         <View style={styles.emptyBlock}>
           <Text selectable style={styles.emptyText}>
             {filter === 'all'
-              ? 'まだメモがありません。右上の「メモを追加」から記録できます。'
+              ? 'まだメモがありません\n右上の「メモを追加」から記録できます'
               : 'このタグのメモはまだありません。'}
           </Text>
         </View>

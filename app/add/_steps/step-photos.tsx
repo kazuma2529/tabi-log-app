@@ -26,7 +26,7 @@ export function StepPhotos({ isPremium, photoUris, onPickPhotos, onRemovePhoto, 
         <View style={styles.photoGrid}>
           {photoUris.map((uri) => (
             <View key={uri} style={styles.photoThumb}>
-              <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+              <Image source={{ uri }} style={styles.photoImage} contentFit="cover" />
               <Pressable style={styles.removePhoto} onPress={() => onRemovePhoto(uri)}>
                 <Ionicons name="close" size={14} color={colors.textPrimary} />
               </Pressable>
@@ -67,12 +67,18 @@ const styles = StyleSheet.create({
   },
   photoThumb: {
     width: '30.9%',
-    aspectRatio: 1,
     overflow: 'hidden',
     borderRadius: radius.md,
     backgroundColor: colors.paperDeep,
     borderColor: colors.border,
     borderWidth: 1,
+  },
+  // 親 View に aspectRatio を持たせて absoluteFill で Image を貼る方式だと、
+  // 一部の環境（新アーキ含む）で Image が measurement 0 で読み込みを諦めるケースが
+  // あるため、Image 自身に幅と aspectRatio を持たせる。
+  photoImage: {
+    width: '100%',
+    aspectRatio: 1,
   },
   removePhoto: {
     position: 'absolute',

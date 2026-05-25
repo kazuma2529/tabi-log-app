@@ -54,17 +54,11 @@ export function WorldMap({ visitedCountryIds, bucketCountryIds, onOpenCountry, o
     <View style={styles.wrap}>
       <View pointerEvents="none" style={styles.decorLayer}>
         <Svg width="100%" height="100%" viewBox="0 0 360 324" preserveAspectRatio="none">
-          <Path d="M5 32 C25 20 39 21 56 32" stroke="#84B9C7" strokeWidth={2} fill="none" opacity={0.55} />
-          <Path d="M13 42 C34 29 51 35 66 45" stroke="#84B9C7" strokeWidth={1.5} fill="none" opacity={0.4} />
-          <Path d="M291 34 C307 16 327 18 345 31" stroke="#84B9C7" strokeWidth={2} fill="none" strokeDasharray="4 6" opacity={0.46} />
-          <Path d="M308 27 L334 13 L323 33 L317 28 L308 27 Z" fill="#6DAFC2" opacity={0.62} />
           <Path d="M38 258 L50 228 L64 258 Z" fill="#F2DDA8" opacity={0.85} />
           <Path d="M50 228 L50 258" stroke="#74AFC2" strokeWidth={1.6} />
           <Path d="M28 259 C47 266 62 264 78 258" stroke="#74AFC2" strokeWidth={2} fill="none" opacity={0.55} />
           <Path d="M236 275 C256 281 278 281 303 274" stroke="#83BCC7" strokeWidth={2.5} fill="none" opacity={0.55} />
           <Path d="M244 289 C264 294 287 294 313 286" stroke="#83BCC7" strokeWidth={2} fill="none" opacity={0.36} />
-          <Circle cx="47" cy="34" r="20" stroke="#D48558" strokeWidth={2} fill="none" opacity={0.4} />
-          <Path d="M31 35 L63 35 M37 45 L57 45" stroke="#D48558" strokeWidth={2} opacity={0.38} />
         </Svg>
       </View>
 
@@ -156,9 +150,9 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
     minHeight: 330,
-    borderRadius: radius.xl,
-    backgroundColor: 'rgba(255, 247, 229, 0.34)',
-    paddingTop: spacing.xxl,
+    borderRadius: radius.lg,
+    backgroundColor: 'rgba(255, 247, 229, 0.12)',
+    paddingTop: spacing.md,
     paddingRight: 2,
     paddingBottom: spacing.sm,
     paddingLeft: 2,
@@ -169,7 +163,7 @@ const styles = StyleSheet.create({
   zoomViewport: {
     width: '100%',
     height: MAP_HEIGHT,
-    marginTop: spacing.xl,
+    marginTop: spacing.sm,
     overflow: 'hidden',
   },
   zoomInner: {

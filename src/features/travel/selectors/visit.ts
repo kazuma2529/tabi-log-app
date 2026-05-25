@@ -43,7 +43,14 @@ export function getCountrySummaries(data: TravelData): CountrySummary[] {
         visitCount: sortedVisits.length,
       };
     })
-    .sort((a, b) => b.lastVisitedAt.localeCompare(a.lastVisitedAt));
+    .sort((a, b) => {
+      const dateDiff = b.lastVisitedAt.localeCompare(a.lastVisitedAt);
+      if (dateDiff !== 0) return dateDiff;
+      // 訪問日が同じ場合は、最新訪問の登録日時 (createdAt) が新しい国を先に出す。
+      const aCreatedAt = a.visits[a.visits.length - 1].visit.createdAt;
+      const bCreatedAt = b.visits[b.visits.length - 1].visit.createdAt;
+      return bCreatedAt.localeCompare(aCreatedAt);
+    });
 }
 
 export function getCountrySummary(data: TravelData, countryId: string) {
