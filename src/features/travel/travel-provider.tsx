@@ -1,4 +1,4 @@
-import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import {
   addBucketCountry as addBucketCountryToDb,
@@ -24,53 +24,13 @@ import {
   updateMemoContent as updateMemoContentInDb,
   updateVisitDate as updateVisitDateInDb,
 } from '@/db';
-import type { AddVisitInput, City, MemoCard, MemoType, Photo, TravelData } from '@/types';
+import type { TravelData } from '@/types';
 
-type TravelContextValue = {
-  data: TravelData;
-  isReady: boolean;
-  error: string | null;
-  refresh: () => Promise<void>;
-  addVisit: (input: AddVisitInput) => Promise<string>;
-  removeVisit: (visitId: string) => Promise<void>;
-  updateVisitDate: (visitId: string, visitedAt: string) => Promise<void>;
-  addCity: (visitId: string, name: string) => Promise<City | null>;
-  removeCity: (cityId: string) => Promise<City | null>;
-  restoreCity: (city: City) => Promise<void>;
-  addPhotosToVisit: (visitId: string, uris: string[]) => Promise<Photo[]>;
-  removePhoto: (photoId: string) => Promise<Photo | null>;
-  restorePhoto: (photo: Photo) => Promise<void>;
-  purgePhotoFile: (storedUri: string) => Promise<void>;
-  addMemo: (visitId: string, type: MemoType, content?: string) => Promise<MemoCard>;
-  updateMemoContent: (memoId: string, content: string) => Promise<void>;
-  removeMemo: (memoId: string) => Promise<MemoCard | null>;
-  restoreMemo: (memo: MemoCard) => Promise<void>;
-  addBucketCountry: (countryId: string) => Promise<void>;
-  removeBucketCountry: (countryId: string) => Promise<void>;
-  addBucketMemo: (countryId: string, content: string) => Promise<void>;
-  removeBucketMemo: (memoId: string) => Promise<void>;
-  toggleBucketMemoDone: (memoId: string, isDone: boolean) => Promise<void>;
-  setDevelopmentPremium: (isPremium: boolean) => Promise<void>;
-};
-
-const emptyData: TravelData = {
-  visits: [],
-  cities: [],
-  photos: [],
-  memoCards: [],
-  bucketList: [],
-  bucketMemos: [],
-  purchase: {
-    isPremium: false,
-    entitlementId: null,
-    updatedAt: new Date().toISOString(),
-  },
-};
-
-export const TravelContext = createContext<TravelContextValue | null>(null);
+import { useRefreshingMutation } from './hooks/create-refreshing-mutation';
+import { TravelContext, emptyTravelData, type TravelContextValue } from './travel-context';
 
 export function TravelProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<TravelData>(emptyData);
+  const [data, setData] = useState<TravelData>(emptyTravelData);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,137 +66,22 @@ export function TravelProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const addVisit = useCallback(
-    async (input: AddVisitInput) => {
-      const visitId = await addVisitToDb(input);
-      await refresh();
-      return visitId;
-    },
-    [refresh],
-  );
-
-  const removeVisit = useCallback(
-    async (visitId: string) => {
-      await removeVisitFromDb(visitId);
-      await refresh();
-    },
-    [refresh],
-  );
-
-  const updateVisitDate = useCallback(
-    async (visitId: string, visitedAt: string) => {
-      await updateVisitDateInDb(visitId, visitedAt);
-      await refresh();
-    },
-    [refresh],
-  );
-
-  const addCity = useCallback(
-    async (visitId: string, name: string) => {
-      const result = await addCityToDb(visitId, name);
-      await refresh();
-      return result;
-    },
-    [refresh],
-  );
-
-  const removeCity = useCallback(
-    async (cityId: string) => {
-      const removed = await removeCityFromDb(cityId);
-      await refresh();
-      return removed;
-    },
-    [refresh],
-  );
-
-  const restoreCity = useCallback(
-    async (city: City) => {
-      await restoreCityInDb(city);
-      await refresh();
-    },
-    [refresh],
-  );
-
-  const addPhotosToVisit = useCallback(
-    async (visitId: string, uris: string[]) => {
-      const created = await addPhotosToVisitInDb(visitId, uris);
-      await refresh();
-      return created;
-    },
-    [refresh],
-  );
-
-  const removePhoto = useCallback(
-    async (photoId: string) => {
-      const removed = await removePhotoFromDb(photoId);
-      await refresh();
-      return removed;
-    },
-    [refresh],
-  );
-
-  const restorePhoto = useCallback(
-    async (photo: Photo) => {
-      await restorePhotoInDb(photo);
-      await refresh();
-    },
-    [refresh],
-  );
-
-  const purgePhotoFile = useCallback(async (storedUri: string) => {
-    await purgePhotoFileInDb(storedUri);
-  }, []);
-
-  const addMemo = useCallback(
-    async (visitId: string, type: MemoType, content?: string) => {
-      const created = await addMemoToDb(visitId, type, content);
-      await refresh();
-      return created;
-    },
-    [refresh],
-  );
-
-  const updateMemoContent = useCallback(
-    async (memoId: string, content: string) => {
-      await updateMemoContentInDb(memoId, content);
-      await refresh();
-    },
-    [refresh],
-  );
-
-  const removeMemo = useCallback(
-    async (memoId: string) => {
-      const removed = await removeMemoFromDb(memoId);
-      await refresh();
-      return removed;
-    },
-    [refresh],
-  );
-
-  const restoreMemo = useCallback(
-    async (memo: MemoCard) => {
-      await restoreMemoInDb(memo);
-      await refresh();
-    },
-    [refresh],
-  );
-
-  const addBucketCountry = useCallback(
-    async (countryId: string) => {
-      await addBucketCountryToDb(countryId);
-      await refresh();
-    },
-    [refresh],
-  );
-
-  const removeBucketCountry = useCallback(
-    async (countryId: string) => {
-      await removeBucketCountryFromDb(countryId);
-      await refresh();
-    },
-    [refresh],
-  );
-
+  const addVisit = useRefreshingMutation(addVisitToDb, refresh);
+  const removeVisit = useRefreshingMutation(removeVisitFromDb, refresh);
+  const updateVisitDate = useRefreshingMutation(updateVisitDateInDb, refresh);
+  const addCity = useRefreshingMutation(addCityToDb, refresh);
+  const removeCity = useRefreshingMutation(removeCityFromDb, refresh);
+  const restoreCity = useRefreshingMutation(restoreCityInDb, refresh);
+  const addPhotosToVisit = useRefreshingMutation(addPhotosToVisitInDb, refresh);
+  const removePhoto = useRefreshingMutation(removePhotoFromDb, refresh);
+  const restorePhoto = useRefreshingMutation(restorePhotoInDb, refresh);
+  const addMemo = useRefreshingMutation(addMemoToDb, refresh);
+  const updateMemoContent = useRefreshingMutation(updateMemoContentInDb, refresh);
+  const removeMemo = useRefreshingMutation(removeMemoFromDb, refresh);
+  const restoreMemo = useRefreshingMutation(restoreMemoInDb, refresh);
+  const addBucketCountry = useRefreshingMutation(addBucketCountryToDb, refresh);
+  const removeBucketCountry = useRefreshingMutation(removeBucketCountryFromDb, refresh);
+  // DB は新規追加 memo の id を返すが、公開 API は Promise<void> なので戻り値を捨てる。
   const addBucketMemo = useCallback(
     async (countryId: string, content: string) => {
       await addBucketMemoToDb(countryId, content);
@@ -244,32 +89,17 @@ export function TravelProvider({ children }: { children: ReactNode }) {
     },
     [refresh],
   );
+  const removeBucketMemo = useRefreshingMutation(removeBucketMemoFromDb, refresh);
+  const toggleBucketMemoDone = useRefreshingMutation(setBucketMemoDoneInDb, refresh);
+  const setDevelopmentPremium = useRefreshingMutation(setPremiumForDevelopment, refresh);
 
-  const removeBucketMemo = useCallback(
-    async (memoId: string) => {
-      await removeBucketMemoFromDb(memoId);
-      await refresh();
-    },
-    [refresh],
-  );
+  // purgePhotoFile はファイルシステム掃除専用で、TravelData の再取得は不要なので
+  // useRefreshingMutation には乗せない。
+  const purgePhotoFile = useCallback(async (storedUri: string) => {
+    await purgePhotoFileInDb(storedUri);
+  }, []);
 
-  const toggleBucketMemoDone = useCallback(
-    async (memoId: string, isDone: boolean) => {
-      await setBucketMemoDoneInDb(memoId, isDone);
-      await refresh();
-    },
-    [refresh],
-  );
-
-  const setDevelopmentPremium = useCallback(
-    async (isPremium: boolean) => {
-      await setPremiumForDevelopment(isPremium);
-      await refresh();
-    },
-    [refresh],
-  );
-
-  const value = useMemo(
+  const value = useMemo<TravelContextValue>(
     () => ({
       data,
       isReady,

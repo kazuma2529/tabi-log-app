@@ -1,9 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 
-import { AppScreen, CountryRow, PaperCard, SearchInput } from '@/components';
+import { AppScreen, CloseIconButton, CountryRow, PaperCard, SearchInput } from '@/components';
 import { COUNTRY_BY_ID, RECOMMENDED_BUCKET_COUNTRY_IDS, searchCountries } from '@/data';
 import { isCountryInBucket } from '@/features';
 import { useTravel } from '@/hooks';
@@ -36,11 +35,7 @@ export default function BucketListAddScreen() {
   return (
     <AppScreen
       title="行きたい国を追加"
-      right={
-        <Pressable accessibilityRole="button" accessibilityLabel="閉じる" style={styles.closeButton} onPress={() => router.back()}>
-          <Ionicons name="close" size={22} color={colors.textPrimary} />
-        </Pressable>
-      }
+      right={<CloseIconButton onPress={() => router.back()} />}
     >
       <PaperCard inset style={styles.searchCard}>
         <SearchInput value={query} onChangeText={setQuery} placeholder="国名で検索" />
@@ -88,16 +83,6 @@ export default function BucketListAddScreen() {
 }
 
 const styles = StyleSheet.create({
-  closeButton: {
-    width: 42,
-    height: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 21,
-    backgroundColor: colors.paper,
-    borderColor: colors.border,
-    borderWidth: 1,
-  },
   searchCard: {
     gap: spacing.md,
   },

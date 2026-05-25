@@ -1,17 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Alert, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, BucketCountrySwipeRow, CountryPhotoCard, EmptyState, PaperCard, ProgressBar, SectionTitle } from '@/components';
-import { getBucketCountries, getCountrySummaries, getLatestVisitedCountry, getMostVisitedCountry, getWorldProgress } from '@/features';
+import {
+  getBucketCountries,
+  getCountrySummaries,
+  getLatestVisitedCountry,
+  getMostVisitedCountry,
+  getWorldProgress,
+  useConfirmBucketDelete,
+} from '@/features';
 import { useTravel } from '@/hooks';
 import { formatDateSlash } from '@/lib';
 import { colors, spacing } from '@/theme';
-import type { Country } from '@/types';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { data, isReady, error, removeBucketCountry } = useTravel();
+  const { data, isReady, error } = useTravel();
+  const confirmDeleteBucket = useConfirmBucketDelete();
   const progress = getWorldProgress(data);
   const recentCountries = getCountrySummaries(data);
   const mostVisited = getMostVisitedCountry(data);
@@ -19,24 +26,6 @@ export default function HomeScreen() {
   const bucketCountries = getBucketCountries(data);
   const visibleBucketCountries = bucketCountries.slice(0, 5);
   const showMostVisited = mostVisited != null && mostVisited.visitCount >= 2;
-
-  function confirmDeleteBucket(country: Country, close: () => void) {
-    Alert.alert(
-      `${country.nameJa}をリストから外しますか？`,
-      'この国の「行ってみたいこと」も一緒に削除されます。',
-      [
-        { text: 'キャンセル', style: 'cancel', onPress: close },
-        {
-          text: '削除',
-          style: 'destructive',
-          onPress: async () => {
-            close();
-            await removeBucketCountry(country.id);
-          },
-        },
-      ],
-    );
-  }
 
   return (
     <AppScreen sky>

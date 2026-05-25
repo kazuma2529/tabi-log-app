@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { AppScreen, EmptyState, PaperCard } from '@/components';
+import { AppScreen, BackIconButton, EmptyState, PaperCard } from '@/components';
 import { COUNTRY_BY_ID } from '@/data';
 import { getBucketMemosByCountry, isCountryInBucket } from '@/features';
 import { useTravel } from '@/hooks';
@@ -150,12 +150,7 @@ function MemoRow({ memo, onToggle, onRemove }: MemoRowProps) {
 
 function BackButton() {
   const router = useRouter();
-
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel="戻る" style={styles.backButton} onPress={() => router.back()}>
-      <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-    </Pressable>
-  );
+  return <BackIconButton onPress={() => router.back()} />;
 }
 
 const styles = StyleSheet.create({
@@ -164,16 +159,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
     minHeight: 44,
-  },
-  backButton: {
-    width: 42,
-    height: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 21,
-    backgroundColor: colors.paper,
-    borderColor: colors.border,
-    borderWidth: 1,
   },
   countryInfo: {
     alignItems: 'center',

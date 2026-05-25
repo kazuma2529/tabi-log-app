@@ -1,45 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AppScreen, BucketCountrySwipeRow, EmptyState } from '@/components';
-import { getBucketCountries } from '@/features';
+import { AppScreen, BackIconButton, BucketCountrySwipeRow, EmptyState } from '@/components';
+import { getBucketCountries, useConfirmBucketDelete } from '@/features';
 import { useTravel } from '@/hooks';
 import { colors, spacing } from '@/theme';
-import type { Country } from '@/types';
 
 export default function BucketListScreen() {
   const router = useRouter();
-  const { data, removeBucketCountry } = useTravel();
+  const { data } = useTravel();
   const bucketCountries = getBucketCountries(data);
-
-  function confirmDelete(country: Country, close: () => void) {
-    Alert.alert(
-      `${country.nameJa}をリストから外しますか？`,
-      'この国の「行ってみたいこと」も一緒に削除されます。',
-      [
-        { text: 'キャンセル', style: 'cancel', onPress: close },
-        {
-          text: '削除',
-          style: 'destructive',
-          onPress: async () => {
-            close();
-            await removeBucketCountry(country.id);
-          },
-        },
-      ],
-    );
-  }
+  const confirmDelete = useConfirmBucketDelete();
 
   return (
     <AppScreen
       title="行ってみたい国"
       headerAlign="center"
-      left={
-        <Pressable accessibilityRole="button" accessibilityLabel="戻る" style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-        </Pressable>
-      }
+      left={<BackIconButton onPress={() => router.back()} />}
     >
       {bucketCountries.length > 0 ? (
         <>
@@ -76,16 +54,6 @@ export default function BucketListScreen() {
 }
 
 const styles = StyleSheet.create({
-  backButton: {
-    width: 42,
-    height: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 21,
-    backgroundColor: colors.paper,
-    borderColor: colors.border,
-    borderWidth: 1,
-  },
   list: {
     gap: spacing.sm,
   },

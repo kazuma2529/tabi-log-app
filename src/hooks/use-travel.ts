@@ -1,6 +1,6 @@
 import { useContext } from 'react';
 
-import { TravelContext } from '@/features/travel/travel-provider';
+import { TravelContext } from '@/features/travel/travel-context';
 
 export function useTravel() {
   const context = useContext(TravelContext);

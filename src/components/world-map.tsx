@@ -1,20 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  runOnJS,
-  useAnimatedReaction,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import { GestureDetector } from 'react-native-gesture-handler';
+import Animated from 'react-native-reanimated';
 import Svg, { Circle, G, Path } from 'react-native-svg';
 
 import { WORLD_COUNTRY_PATH_BY_ISO, WORLD_COUNTRY_PATHS } from '@/data/world-country-paths';
 import { getMapCountries } from '@/features';
 import { colors, radius, shadows, spacing } from '@/theme';
 import type { Country } from '@/types';
+
+import { useWorldMapZoom } from './world-map/use-world-map-zoom';
 
 type WorldMapProps = {
   visitedCountryIds: Set<string>;
@@ -24,35 +19,17 @@ type WorldMapProps = {
   onAddBucket: (country: Country) => void;
 };
 
-const MIN_SCALE = 1;
-const MAX_SCALE = 6;
 const MAP_HEIGHT = 252;
 
 export function WorldMap({ visitedCountryIds, bucketCountryIds, onOpenCountry, onAddVisit, onAddBucket }: WorldMapProps) {
   const countries = getMapCountries();
   const countriesByIso = new Map(countries.map((country) => [country.isoCode, country]));
   const tappableCountries = countries.filter((country) => WORLD_COUNTRY_PATH_BY_ISO[country.isoCode]);
-  const backgroundCountries = WORLD_COUNTRY_PATHS.filter((country) => country.isoCode !== 'AQ' && !countriesByIso.has(country.isoCode));
-
-  const scale = useSharedValue(1);
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const lastPinchScale = useSharedValue(1);
-  const lastPanX = useSharedValue(0);
-  const lastPanY = useSharedValue(0);
-  const viewWidth = useSharedValue(0);
-  const viewHeight = useSharedValue(0);
-
-  const [isZoomed, setIsZoomed] = useState(false);
-
-  useAnimatedReaction(
-    () => scale.value > 1.01,
-    (current, previous) => {
-      if (current !== previous) {
-        runOnJS(setIsZoomed)(current);
-      }
-    },
+  const backgroundCountries = WORLD_COUNTRY_PATHS.filter(
+    (country) => country.isoCode !== 'AQ' && !countriesByIso.has(country.isoCode),
   );
+
+  const { isZoomed, composedGesture, animatedStyle, onLayout, handleResetZoom } = useWorldMapZoom();
 
   function handleCountryPress(country: Country) {
     const visited = visitedCountryIds.has(country.id);
@@ -73,76 +50,6 @@ export function WorldMap({ visitedCountryIds, bucketCountryIds, onOpenCountry, o
     ]);
   }
 
-  function handleResetZoom() {
-    scale.value = withTiming(1, { duration: 220 });
-    translateX.value = withTiming(0, { duration: 220 });
-    translateY.value = withTiming(0, { duration: 220 });
-  }
-
-  const pinchGesture = Gesture.Pinch()
-    .onStart(() => {
-      lastPinchScale.value = 1;
-    })
-    .onUpdate((e) => {
-      const increment = e.scale / lastPinchScale.value;
-      lastPinchScale.value = e.scale;
-
-      const target = scale.value * increment;
-      const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, target));
-      if (newScale === scale.value) {
-        return;
-      }
-
-      const ratio = newScale / scale.value;
-      const focalX = e.focalX;
-      const focalY = e.focalY;
-      const nextTx = focalX - ratio * (focalX - translateX.value);
-      const nextTy = focalY - ratio * (focalY - translateY.value);
-
-      const w = viewWidth.value;
-      const h = viewHeight.value;
-      const minTx = -(newScale - 1) * w;
-      const minTy = -(newScale - 1) * h;
-
-      scale.value = newScale;
-      translateX.value = Math.min(0, Math.max(minTx, nextTx));
-      translateY.value = Math.min(0, Math.max(minTy, nextTy));
-    });
-
-  const panGesture = Gesture.Pan()
-    .minDistance(8)
-    .minPointers(1)
-    .maxPointers(2)
-    .onStart((e) => {
-      lastPanX.value = e.translationX;
-      lastPanY.value = e.translationY;
-    })
-    .onUpdate((e) => {
-      const dx = e.translationX - lastPanX.value;
-      const dy = e.translationY - lastPanY.value;
-      lastPanX.value = e.translationX;
-      lastPanY.value = e.translationY;
-
-      const s = scale.value;
-      const w = viewWidth.value;
-      const h = viewHeight.value;
-      const minTx = -(s - 1) * w;
-      const minTy = -(s - 1) * h;
-
-      translateX.value = Math.min(0, Math.max(minTx, translateX.value + dx));
-      translateY.value = Math.min(0, Math.max(minTy, translateY.value + dy));
-    });
-
-  const composedGesture = Gesture.Simultaneous(pinchGesture, panGesture);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-      { scale: scale.value },
-    ],
-  }));
-
   return (
     <View style={styles.wrap}>
       <View pointerEvents="none" style={styles.decorLayer}>
@@ -162,13 +69,7 @@ export function WorldMap({ visitedCountryIds, bucketCountryIds, onOpenCountry, o
       </View>
 
       <GestureDetector gesture={composedGesture}>
-        <Animated.View
-          style={styles.zoomViewport}
-          onLayout={(event) => {
-            viewWidth.value = event.nativeEvent.layout.width;
-            viewHeight.value = event.nativeEvent.layout.height;
-          }}
-        >
+        <Animated.View style={styles.zoomViewport} onLayout={onLayout}>
           <Animated.View style={[styles.zoomInner, animatedStyle]}>
             <Svg width="100%" height="100%" viewBox="0 0 360 198">
               <G opacity={0.96}>

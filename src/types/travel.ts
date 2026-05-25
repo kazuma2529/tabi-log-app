@@ -1,7 +1,5 @@
 export type Region = 'アジア' | 'ヨーロッパ' | '北米' | '南米' | 'アフリカ' | 'オセアニア';
 
-export type Continent = Region;
-
 export type Country = {
   id: string;
   isoCode: string;
@@ -9,7 +7,7 @@ export type Country = {
   nameEn: string;
   flag: string;
   region: Region;
-  continent: Continent;
+  continent: Region;
   mapX: number;
   mapY: number;
   accent: string;
