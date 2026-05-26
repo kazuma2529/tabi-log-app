@@ -1,0 +1,12 @@
+Total: 196
+Asia: 46
+Europe: 46
+NA: 23
+SA: 12
+Africa: 54
+Oceania: 15
+Japan included: false
+Taiwan included: true
+Duplicate IDs: 0
+Duplicate ISOs: 0
+Out of range: 0

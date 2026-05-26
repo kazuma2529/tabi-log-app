@@ -8,13 +8,19 @@
     "scheme": "tabilog",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "platforms": ["ios"],
+    "platforms": [
+      "ios"
+    ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.tabilog.ios"
+      "bundleIdentifier": "app.tabilog.ios",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "訪問記録に旅の写真を追加するため、写真ライブラリへのアクセスを使用します。"
+      }
     },
     "plugins": [
       "expo-router",
+      "expo-image-picker",
       [
         "expo-splash-screen",
         {
@@ -23,7 +29,9 @@
           "resizeMode": "contain",
           "backgroundColor": "#F5EFE3"
         }
-      ]
+      ],
+      "expo-sqlite",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true
