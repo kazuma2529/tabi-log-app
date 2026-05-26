@@ -126,19 +126,23 @@ export function useVisitEditor({
     [selectedVisit, updateVisitDate, setDatePickerOpen],
   );
 
-  const handleAddCity = useCallback(async () => {
-    if (!selectedVisit) return;
+  // 都市の追加に成功したか（または空文字で何もしなかったか）を返す。
+  // Enter 確定時に「成功したときだけ編集モードを抜ける」分岐に使う。
+  const handleAddCity = useCallback(async (): Promise<boolean> => {
+    if (!selectedVisit) return false;
     const trimmed = cityDraft.trim();
     if (!trimmed) {
       setCityInputOpen(false);
-      return;
+      return true;
     }
     try {
       await addCity(selectedVisit.visit.id, trimmed);
       setCityDraft('');
       setCityInputOpen(false);
+      return true;
     } catch (caught) {
       Alert.alert('都市を追加できませんでした', caught instanceof Error ? caught.message : 'もう一度お試しください。');
+      return false;
     }
   }, [addCity, cityDraft, selectedVisit, setCityDraft, setCityInputOpen]);
 

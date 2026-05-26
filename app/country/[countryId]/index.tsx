@@ -177,6 +177,10 @@ export default function CountryDetailScreen() {
               setCityInputOpen(true);
             }}
             onAddCity={editor.handleAddCity}
+            onSubmitCity={async () => {
+              const ok = await editor.handleAddCity();
+              if (ok) setCityEditing(false);
+            }}
             onRemoveCity={editor.handleRemoveCity}
           />
 

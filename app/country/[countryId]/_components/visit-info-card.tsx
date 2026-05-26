@@ -20,6 +20,7 @@ type VisitInfoCardProps = {
   onToggleCityEditing: () => void;
   onOpenCityInput: () => void;
   onAddCity: () => void;
+  onSubmitCity: () => void;
   onRemoveCity: (city: City) => void;
 };
 
@@ -36,6 +37,7 @@ export function VisitInfoCard({
   onToggleCityEditing,
   onOpenCityInput,
   onAddCity,
+  onSubmitCity,
   onRemoveCity,
 }: VisitInfoCardProps) {
   return (
@@ -132,8 +134,7 @@ export function VisitInfoCard({
                       placeholderTextColor={colors.textMuted}
                       style={styles.cityInput}
                       returnKeyType="done"
-                      onSubmitEditing={onAddCity}
-                      onBlur={onAddCity}
+                      onSubmitEditing={onSubmitCity}
                     />
                     <Pressable
                       accessibilityRole="button"
