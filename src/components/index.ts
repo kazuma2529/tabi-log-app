@@ -7,6 +7,7 @@ export * from './empty-state';
 export * from './icon-button';
 export * from './memo-swipe-row';
 export * from './paper-card';
+export * from './premium-upgrade-card';
 export * from './primary-button';
 export * from './progress-bar';
 export * from './search-input';

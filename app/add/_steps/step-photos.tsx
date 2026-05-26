@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { EmptyState, PrimaryButton } from '@/components';
 import { FREE_PHOTO_LIMIT } from '@/constants';
+import { PREMIUM_UNLOCK_SHORT_COPY } from '@/lib';
 import { colors, radius, spacing } from '@/theme';
 
 type StepPhotosProps = {
@@ -20,7 +21,9 @@ export function StepPhotos({ isPremium, photoUris, onPickPhotos, onRemovePhoto, 
       <Text selectable style={styles.helper}>
         {isPremium
           ? '有料版扱いのため写真は無制限で追加できます。'
-          : `あと${Math.max(FREE_PHOTO_LIMIT - photoUris.length, 0)}枚まで追加できます（無料プラン）。`}
+          : photoUris.length >= FREE_PHOTO_LIMIT
+            ? PREMIUM_UNLOCK_SHORT_COPY
+            : `あと${Math.max(FREE_PHOTO_LIMIT - photoUris.length, 0)}枚まで追加できます（無料プラン）。`}
       </Text>
       {photoUris.length > 0 ? (
         <View style={styles.photoGrid}>

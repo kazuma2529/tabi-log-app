@@ -28,6 +28,7 @@ export default function RootLayout() {
               <Stack.Screen name="bucket/[countryId]/index" />
               <Stack.Screen name="country/[countryId]/index" />
               <Stack.Screen name="visited-countries/index" />
+              <Stack.Screen name="yearly-analysis/index" />
             </Stack>
             <StatusBar style="dark" />
           </UndoToastProvider>

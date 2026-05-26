@@ -23,12 +23,14 @@ const DEFAULT_PHOTO_LIMIT = PHOTOS_PER_ROW * DEFAULT_PHOTO_ROWS;
 
 export default function CountryDetailScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ countryId: string }>();
+  const params = useLocalSearchParams<{ countryId: string; visitId?: string }>();
   const { data, addBucketCountry } = useTravel();
   const country = COUNTRY_BY_ID[params.countryId];
   const summary = getCountrySummary(data, params.countryId);
+  const requestedVisitId = typeof params.visitId === 'string' ? params.visitId : null;
 
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(summary?.visits[0]?.visit.id ?? null);
+  const [appliedRequestedVisitId, setAppliedRequestedVisitId] = useState<string | null>(null);
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const [isCityEditing, setCityEditing] = useState(false);
   const [cityDraft, setCityDraft] = useState('');
@@ -42,10 +44,29 @@ export default function CountryDetailScreen() {
   const { scrollViewRef, registerMemoRef, handleScroll } = useMemoAutoscroll(editingMemoId);
 
   useEffect(() => {
-    if (!selectedVisitId && summary?.visits[0]) {
+    if (!summary?.visits.length) {
+      if (selectedVisitId) {
+        setSelectedVisitId(null);
+      }
+      return;
+    }
+
+    if (requestedVisitId && requestedVisitId !== appliedRequestedVisitId) {
+      const requestedExists = summary.visits.some((bundle) => bundle.visit.id === requestedVisitId);
+      if (requestedExists) {
+        setSelectedVisitId(requestedVisitId);
+      }
+      setAppliedRequestedVisitId(requestedVisitId);
+      return;
+    }
+
+    const currentExists = selectedVisitId
+      ? summary.visits.some((bundle) => bundle.visit.id === selectedVisitId)
+      : false;
+    if (!currentExists) {
       setSelectedVisitId(summary.visits[0].visit.id);
     }
-  }, [selectedVisitId, summary]);
+  }, [appliedRequestedVisitId, requestedVisitId, selectedVisitId, summary]);
 
   const selectedVisit = useMemo(() => {
     return summary?.visits.find((bundle) => bundle.visit.id === selectedVisitId) ?? summary?.visits[0];
@@ -160,6 +181,8 @@ export default function CountryDetailScreen() {
           />
 
           <PhotoSection
+            isPremium={editor.isPremium}
+            photoCount={selectedVisit.photos.length}
             visiblePhotos={visiblePhotos}
             hasOverflow={hasOverflowPhotos}
             showAll={showAllPhotos}

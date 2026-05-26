@@ -3,10 +3,14 @@ import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PaperCard } from '@/components';
+import { FREE_PHOTO_LIMIT } from '@/constants';
+import { PREMIUM_UNLOCK_SHORT_COPY } from '@/lib';
 import { colors, radius, spacing, text } from '@/theme';
 import type { Photo } from '@/types';
 
 type PhotoSectionProps = {
+  isPremium: boolean;
+  photoCount: number;
   visiblePhotos: Photo[];
   hasOverflow: boolean;
   showAll: boolean;
@@ -16,6 +20,8 @@ type PhotoSectionProps = {
 };
 
 export function PhotoSection({
+  isPremium,
+  photoCount,
   visiblePhotos,
   hasOverflow,
   showAll,
@@ -23,6 +29,8 @@ export function PhotoSection({
   onPickPhotos,
   onRemovePhoto,
 }: PhotoSectionProps) {
+  const remainingPhotoCount = Math.max(FREE_PHOTO_LIMIT - photoCount, 0);
+
   return (
     <PaperCard inset style={styles.section}>
       <View style={styles.header}>
@@ -45,6 +53,13 @@ export function PhotoSection({
           </Pressable>
         ) : null}
       </View>
+      <Text selectable style={styles.helper}>
+        {isPremium
+          ? '有料版扱いのため、この訪問には写真を無制限で追加できます。'
+          : remainingPhotoCount > 0
+            ? `無料版では1訪問あたり${FREE_PHOTO_LIMIT}枚まで。あと${remainingPhotoCount}枚追加できます。`
+            : PREMIUM_UNLOCK_SHORT_COPY}
+      </Text>
       {visiblePhotos.length > 0 ? (
         <View style={styles.grid}>
           {visiblePhotos.map((photo) => (
@@ -81,6 +96,11 @@ export function PhotoSection({
 const styles = StyleSheet.create({
   section: {
     gap: spacing.md,
+  },
+  helper: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 18,
   },
   header: {
     flexDirection: 'row',

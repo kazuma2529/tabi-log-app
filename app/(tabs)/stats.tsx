@@ -1,18 +1,43 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 
-import { AppScreen, DonutChart, PaperCard, ProgressBar, ProgressDonut, SectionTitle } from '@/components';
+import {
+  AppScreen,
+  DonutChart,
+  PaperCard,
+  PremiumUpgradeCard,
+  PrimaryButton,
+  ProgressBar,
+  ProgressDonut,
+  SectionTitle,
+} from '@/components';
 import { REGION_COLORS } from '@/constants';
-import { getRegionStats, getVisitsByYear, getWorldProgress } from '@/features';
-import { useTravel } from '@/hooks';
+import { getRegionStats, getWorldProgress, getYearlyTravelSummaries } from '@/features';
+import { usePremium, useTravel } from '@/hooks';
+import { PREMIUM_REVENUECAT_PENDING_MESSAGE, PREMIUM_UNLOCK_SHORT_COPY } from '@/lib';
 import { colors, spacing } from '@/theme';
 
 export default function StatsScreen() {
+  const router = useRouter();
   const { data } = useTravel();
+  const { isPremium, setDevelopmentPremium } = usePremium();
   const progress = getWorldProgress(data);
   const regionStats = getRegionStats(data);
-  const visitsByYear = getVisitsByYear(data);
+  const yearlySummaries = getYearlyTravelSummaries(data);
+  const latestYearlySummary = yearlySummaries[yearlySummaries.length - 1];
   const donutSegments = regionStats.map((stat) => ({ value: stat.visited, color: stat.color }));
+  const showRevenueCatPending = () => {
+    Alert.alert('RevenueCat 接続前です', PREMIUM_REVENUECAT_PENDING_MESSAGE);
+  };
+  const enableDevelopmentPremium = async () => {
+    await setDevelopmentPremium(true);
+    Alert.alert('有料表示にしました', '開発用フラグで有料機能を確認できます。');
+  };
+  const disableDevelopmentPremium = async () => {
+    await setDevelopmentPremium(false);
+    Alert.alert('無料表示に戻しました', '開発用フラグをオフにしました。');
+  };
 
   return (
     <AppScreen title="統計" backgroundImage={require('../../assets/images/stats-travel-background.png')} headerAlign="center">
@@ -67,24 +92,37 @@ export default function StatsScreen() {
         </View>
       </PaperCard>
 
-      <PaperCard style={styles.lockCard}>
-        <View style={styles.lockIcon}>
-          <Ionicons name="lock-closed" size={24} color={colors.accentGold} />
-        </View>
-        <View style={styles.lockText}>
-          <Text selectable style={styles.lockTitle}>
-            年別分析
-          </Text>
-          <Text selectable style={styles.lockBody}>
-            年ごとの訪問国、新規訪問国、推移グラフは有料版限定機能として後続フェーズでRevenueCatに接続します。
-          </Text>
-          {visitsByYear.length > 0 ? (
-            <Text selectable style={styles.yearHint}>
-              現在の記録年：{visitsByYear.map((item) => item.year).join('、')}
-            </Text>
+      {isPremium ? (
+        <PaperCard style={styles.yearlyCard}>
+          <View style={styles.yearlyHeader}>
+            <View style={styles.yearlyIcon}>
+              <Ionicons name="calendar" size={23} color={colors.accentTealDark} />
+            </View>
+            <View style={styles.yearlyText}>
+              <Text selectable style={styles.yearlyTitle}>
+                年別分析
+              </Text>
+              <Text selectable style={styles.yearlyBody}>
+                {latestYearlySummary
+                  ? `${latestYearlySummary.year}年は${latestYearlySummary.countryCount}か国を訪問し、新規で${latestYearlySummary.newCountryCount}か国が増えました。`
+                  : '訪問記録が増えると、年ごとの訪問国と新規訪問国を振り返れます。'}
+              </Text>
+            </View>
+          </View>
+          <PrimaryButton label="年別分析を見る" onPress={() => router.push('/yearly-analysis')} />
+          {__DEV__ ? (
+            <PrimaryButton label="開発用：無料表示に戻す" variant="secondary" onPress={disableDevelopmentPremium} />
           ) : null}
-        </View>
-      </PaperCard>
+        </PaperCard>
+      ) : (
+        <PremiumUpgradeCard
+          title="年別分析"
+          body={`年ごとの訪問国、新規訪問国、推移グラフを振り返れます。${PREMIUM_UNLOCK_SHORT_COPY}`}
+          onPurchasePress={showRevenueCatPending}
+          onRestorePress={showRevenueCatPending}
+          onEnableDevelopmentPremium={__DEV__ ? enableDevelopmentPremium : undefined}
+        />
+      )}
     </AppScreen>
   );
 }
@@ -184,37 +222,36 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontVariant: ['tabular-nums'],
   },
-  lockCard: {
-    flexDirection: 'row',
+  yearlyCard: {
     gap: spacing.md,
-    backgroundColor: 'rgba(255, 240, 214, 0.92)',
-    borderColor: '#DDBB78',
+    backgroundColor: 'rgba(235, 247, 242, 0.94)',
+    borderColor: '#A8D4C7',
   },
-  lockIcon: {
+  yearlyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  yearlyIcon: {
     width: 46,
     height: 46,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 23,
-    backgroundColor: '#F8DFA7',
+    backgroundColor: '#D8EFE8',
   },
-  lockText: {
+  yearlyText: {
     flex: 1,
     gap: spacing.xs,
   },
-  lockTitle: {
+  yearlyTitle: {
     color: colors.textPrimary,
     fontSize: 17,
     fontWeight: '900',
   },
-  lockBody: {
+  yearlyBody: {
     color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 20,
-  },
-  yearHint: {
-    color: colors.accentGold,
-    fontSize: 12,
-    fontWeight: '800',
   },
 });

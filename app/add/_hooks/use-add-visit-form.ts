@@ -6,8 +6,14 @@ import { Alert } from 'react-native';
 import { FREE_PHOTO_LIMIT } from '@/constants';
 import { COUNTRY_BY_ID, searchCountries } from '@/data';
 import { getCountrySummaries, getVisitedCountryIds } from '@/features';
-import { useTravel } from '@/hooks';
-import { isValidISODate, pickAndStoreVisitPhotos, toISODate, todayISO } from '@/lib';
+import { usePremium, useTravel } from '@/hooks';
+import {
+  isValidISODate,
+  pickAndStoreVisitPhotos,
+  PREMIUM_PHOTO_LIMIT_REACHED_MESSAGE,
+  toISODate,
+  todayISO,
+} from '@/lib';
 import type { MemoType } from '@/types';
 
 import { type CountryFilter } from '../_constants';
@@ -29,6 +35,7 @@ export function useAddVisitForm() {
   const router = useRouter();
   const params = useLocalSearchParams<{ countryId?: string }>();
   const { data, addVisit } = useTravel();
+  const { isPremium } = usePremium();
 
   const visitedIds = getVisitedCountryIds(data);
   const countrySummaries = getCountrySummaries(data);
@@ -53,7 +60,6 @@ export function useAddVisitForm() {
   const [isSaving, setIsSaving] = useState(false);
 
   const selectedCountry = countryId ? COUNTRY_BY_ID[countryId] : null;
-  const isPremium = data.purchase.isPremium;
 
   useEffect(() => {
     if (params.countryId && COUNTRY_BY_ID[params.countryId]) {
@@ -103,7 +109,7 @@ export function useAddVisitForm() {
     try {
       const result = await pickAndStoreVisitPhotos(photoUris.length, isPremium);
       if (result.limitReached) {
-        Alert.alert('写真の上限です', `無料版では1訪問あたり${FREE_PHOTO_LIMIT}枚まで追加できます。`);
+        Alert.alert('写真の上限です', PREMIUM_PHOTO_LIMIT_REACHED_MESSAGE);
         return;
       }
       setPhotoUris((current) => [...current, ...result.uris].slice(0, isPremium ? undefined : FREE_PHOTO_LIMIT));

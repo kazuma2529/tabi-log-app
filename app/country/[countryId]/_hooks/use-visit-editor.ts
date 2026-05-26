@@ -4,10 +4,9 @@ import { useCallback } from 'react';
 import { Alert } from 'react-native';
 
 import { useUndoToast } from '@/components';
-import { FREE_PHOTO_LIMIT } from '@/constants';
 import { getMemoDefinition } from '@/data';
-import { useTravel } from '@/hooks';
-import { pickAndStoreVisitPhotos, toISODate } from '@/lib';
+import { usePremium, useTravel } from '@/hooks';
+import { pickAndStoreVisitPhotos, PREMIUM_PHOTO_LIMIT_REACHED_MESSAGE, toISODate } from '@/lib';
 import type { City, CountrySummary, MemoCard, MemoType, Photo, VisitBundle } from '@/types';
 
 type UseVisitEditorInput = {
@@ -48,7 +47,6 @@ export function useVisitEditor({
 }: UseVisitEditorInput) {
   const router = useRouter();
   const {
-    data,
     removeVisit,
     updateVisitDate,
     addCity,
@@ -64,7 +62,7 @@ export function useVisitEditor({
     restoreMemo,
   } = useTravel();
   const { showUndoToast } = useUndoToast();
-  const isPremium = data.purchase.isPremium;
+  const { isPremium } = usePremium();
 
   const confirmDeleteVisit = useCallback(() => {
     if (!selectedVisit) return;
@@ -172,7 +170,7 @@ export function useVisitEditor({
       const current = selectedVisit.photos.length;
       const result = await pickAndStoreVisitPhotos(current, isPremium);
       if (result.limitReached) {
-        Alert.alert('写真の上限です', `無料版では1訪問あたり${FREE_PHOTO_LIMIT}枚まで追加できます。`);
+        Alert.alert('写真の上限です', PREMIUM_PHOTO_LIMIT_REACHED_MESSAGE);
         return;
       }
       if (result.uris.length === 0) return;
