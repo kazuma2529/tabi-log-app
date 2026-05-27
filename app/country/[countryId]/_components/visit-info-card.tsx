@@ -1,11 +1,12 @@
-import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { StyleSheet, View } from 'react-native';
 
 import { PaperCard } from '@/components';
-import { formatDateSlash, fromISODate } from '@/lib';
-import { colors, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 import type { City } from '@/types';
+
+import { VisitCitiesRow } from './visit-cities-row';
+import { VisitDateRow } from './visit-date-row';
 
 type VisitInfoCardProps = {
   visitedAt: string;
@@ -42,140 +43,27 @@ export function VisitInfoCard({
 }: VisitInfoCardProps) {
   return (
     <PaperCard inset style={styles.card}>
-      <View style={styles.infoRow}>
-        <Ionicons name="calendar-outline" size={18} color={colors.accentTealDark} />
-        <Text selectable style={styles.infoLabel}>
-          訪問日
-        </Text>
-        <Text selectable style={styles.infoValue}>
-          {formatDateSlash(visitedAt)}
-        </Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="訪問日を編集"
-          hitSlop={6}
-          style={styles.editIconButton}
-          onPress={onToggleDatePicker}
-        >
-          <Ionicons
-            name={isDatePickerOpen ? 'chevron-up' : 'pencil-outline'}
-            size={16}
-            color={colors.textMuted}
-          />
-        </Pressable>
-      </View>
-      {isDatePickerOpen ? (
-        <View style={styles.datePickerWrap}>
-          <DateTimePicker
-            value={fromISODate(visitedAt)}
-            mode="date"
-            display="inline"
-            locale="ja-JP"
-            maximumDate={new Date()}
-            onChange={onDateChange}
-            themeVariant="light"
-            accentColor={colors.accentTealDark}
-          />
-        </View>
-      ) : null}
+      <VisitDateRow
+        visitedAt={visitedAt}
+        isDatePickerOpen={isDatePickerOpen}
+        onToggleDatePicker={onToggleDatePicker}
+        onDateChange={onDateChange}
+      />
 
       <View style={styles.divider} />
 
-      <View style={styles.infoRow}>
-        <Ionicons name="location-outline" size={18} color={colors.accentTealDark} />
-        <Text selectable style={styles.infoLabel}>
-          訪問都市
-        </Text>
-        <View style={styles.cityValueArea}>
-          {cities.length === 0 && !isCityEditing ? (
-            <Text selectable style={styles.cityEmptyInline}>
-              未登録
-            </Text>
-          ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              style={styles.cityChipScroll}
-              contentContainerStyle={styles.cityChipRow}
-            >
-              {cities.map((city) =>
-                isCityEditing ? (
-                  <View key={city.id} style={styles.chipWithDelete}>
-                    <Text selectable style={styles.chipText} numberOfLines={1}>
-                      {city.name}
-                    </Text>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`${city.name} を削除`}
-                      style={styles.chipDelete}
-                      hitSlop={6}
-                      onPress={() => onRemoveCity(city)}
-                    >
-                      <Ionicons name="close" size={12} color={colors.textPrimary} />
-                    </Pressable>
-                  </View>
-                ) : (
-                  <View key={city.id} style={styles.chip}>
-                    <Text selectable style={styles.chipText} numberOfLines={1}>
-                      {city.name}
-                    </Text>
-                  </View>
-                ),
-              )}
-              {isCityEditing ? (
-                isCityInputOpen ? (
-                  <View style={styles.cityInputRow}>
-                    <TextInput
-                      value={cityDraft}
-                      onChangeText={onChangeCityDraft}
-                      autoFocus
-                      placeholder="例: バンコク"
-                      placeholderTextColor={colors.textMuted}
-                      style={styles.cityInput}
-                      returnKeyType="done"
-                      onSubmitEditing={onSubmitCity}
-                    />
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="都市を追加"
-                      style={styles.cityCommit}
-                      onPress={onAddCity}
-                    >
-                      <Ionicons name="checkmark" size={16} color={colors.white} />
-                    </Pressable>
-                  </View>
-                ) : (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="都市を追加"
-                    style={styles.addCityPill}
-                    onPress={onOpenCityInput}
-                  >
-                    <Ionicons name="add" size={14} color={colors.accentTealDark} />
-                    <Text selectable style={styles.addCityText}>
-                      都市を追加
-                    </Text>
-                  </Pressable>
-                )
-              ) : null}
-            </ScrollView>
-          )}
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={isCityEditing ? '訪問都市の編集を終える' : '訪問都市を編集'}
-          hitSlop={6}
-          style={styles.editIconButton}
-          onPress={onToggleCityEditing}
-        >
-          <Ionicons
-            name={isCityEditing ? 'checkmark' : 'pencil-outline'}
-            size={16}
-            color={isCityEditing ? colors.accentTealDark : colors.textMuted}
-          />
-        </Pressable>
-      </View>
+      <VisitCitiesRow
+        cities={cities}
+        isCityEditing={isCityEditing}
+        isCityInputOpen={isCityInputOpen}
+        cityDraft={cityDraft}
+        onChangeCityDraft={onChangeCityDraft}
+        onToggleCityEditing={onToggleCityEditing}
+        onOpenCityInput={onOpenCityInput}
+        onAddCity={onAddCity}
+        onSubmitCity={onSubmitCity}
+        onRemoveCity={onRemoveCity}
+      />
     </PaperCard>
   );
 }
@@ -184,137 +72,9 @@ const styles = StyleSheet.create({
   card: {
     gap: spacing.md,
   },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  infoLabel: {
-    width: 72,
-    color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  infoValue: {
-    flex: 1,
-    color: colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  editIconButton: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
-    borderColor: colors.border,
-    borderWidth: 1,
-  },
-  datePickerWrap: {
-    marginHorizontal: -spacing.sm,
-    paddingHorizontal: spacing.xs,
-    borderRadius: radius.md,
-    backgroundColor: 'rgba(255, 250, 238, 0.55)',
-  },
   divider: {
     height: 1,
     backgroundColor: colors.border,
     opacity: 0.6,
-  },
-  cityValueArea: {
-    flex: 1,
-    minWidth: 0,
-    overflow: 'hidden',
-  },
-  cityEmptyInline: {
-    color: colors.textMuted,
-    fontSize: 13,
-    fontStyle: 'italic',
-  },
-  cityChipScroll: {
-    flexGrow: 0,
-  },
-  cityChipRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingRight: spacing.xs,
-  },
-  chip: {
-    minHeight: 26,
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-    borderRadius: radius.round,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.paper,
-  },
-  chipWithDelete: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    minHeight: 28,
-    paddingLeft: 10,
-    paddingRight: 4,
-    borderRadius: radius.round,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.paper,
-  },
-  chipText: {
-    color: colors.textPrimary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  chipDelete: {
-    width: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 10,
-    backgroundColor: 'rgba(84, 55, 21, 0.10)',
-  },
-  addCityPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    minHeight: 28,
-    paddingHorizontal: 10,
-    borderRadius: radius.round,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.accentTealDark,
-    backgroundColor: 'rgba(47, 155, 145, 0.08)',
-  },
-  addCityText: {
-    color: colors.accentTealDark,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  cityInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  cityInput: {
-    minWidth: 100,
-    minHeight: 30,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.round,
-    borderWidth: 1,
-    borderColor: colors.accentTealDark,
-    backgroundColor: colors.white,
-    color: colors.textPrimary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  cityCommit: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 14,
-    backgroundColor: colors.accentTealDark,
   },
 });

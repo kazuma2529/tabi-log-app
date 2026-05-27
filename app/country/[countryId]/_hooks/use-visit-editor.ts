@@ -5,7 +5,7 @@ import { Alert } from 'react-native';
 
 import { useUndoToast } from '@/components';
 import { getMemoDefinition } from '@/data';
-import { usePremium, useTravel } from '@/hooks';
+import { useErrorAlert, usePremium, useTravel } from '@/hooks';
 import { pickAndStoreVisitPhotos, PREMIUM_PHOTO_LIMIT_REACHED_MESSAGE, toISODate } from '@/lib';
 import type { City, CountrySummary, MemoCard, MemoType, Photo, VisitBundle } from '@/types';
 
@@ -63,6 +63,7 @@ export function useVisitEditor({
   } = useTravel();
   const { showUndoToast } = useUndoToast();
   const { isPremium } = usePremium();
+  const { runWithErrorAlert } = useErrorAlert();
 
   const confirmDeleteVisit = useCallback(() => {
     if (!selectedVisit) return;
@@ -76,7 +77,7 @@ export function useVisitEditor({
           text: '削除',
           style: 'destructive',
           onPress: async () => {
-            try {
+            await runWithErrorAlert('削除できませんでした', async () => {
               const remaining = summary?.visits.filter((bundle) => bundle.visit.id !== visitId) ?? [];
               await removeVisit(visitId);
               if (remaining.length > 0) {
@@ -84,14 +85,12 @@ export function useVisitEditor({
               } else {
                 router.back();
               }
-            } catch (caught) {
-              Alert.alert('削除できませんでした', caught instanceof Error ? caught.message : 'もう一度お試しください。');
-            }
+            });
           },
         },
       ],
     );
-  }, [removeVisit, router, selectedVisit, summary, setSelectedVisitId]);
+  }, [removeVisit, router, runWithErrorAlert, selectedVisit, summary, setSelectedVisitId]);
 
   const openMoreMenu = useCallback(() => {
     Alert.alert(
@@ -116,14 +115,12 @@ export function useVisitEditor({
         setDatePickerOpen(false);
         return;
       }
-      try {
+      await runWithErrorAlert('日付を更新できませんでした', async () => {
         await updateVisitDate(selectedVisit.visit.id, iso);
         setDatePickerOpen(false);
-      } catch (caught) {
-        Alert.alert('日付を更新できませんでした', caught instanceof Error ? caught.message : 'もう一度お試しください。');
-      }
+      });
     },
-    [selectedVisit, updateVisitDate, setDatePickerOpen],
+    [runWithErrorAlert, selectedVisit, updateVisitDate, setDatePickerOpen],
   );
 
   // 都市の追加に成功したか（または空文字で何もしなかったか）を返す。
@@ -135,20 +132,18 @@ export function useVisitEditor({
       setCityInputOpen(false);
       return true;
     }
-    try {
+    const ok = await runWithErrorAlert('都市を追加できませんでした', async () => {
       await addCity(selectedVisit.visit.id, trimmed);
       setCityDraft('');
       setCityInputOpen(false);
       return true;
-    } catch (caught) {
-      Alert.alert('都市を追加できませんでした', caught instanceof Error ? caught.message : 'もう一度お試しください。');
-      return false;
-    }
-  }, [addCity, cityDraft, selectedVisit, setCityDraft, setCityInputOpen]);
+    });
+    return ok ?? false;
+  }, [addCity, cityDraft, runWithErrorAlert, selectedVisit, setCityDraft, setCityInputOpen]);
 
   const handleRemoveCity = useCallback(
     async (city: City) => {
-      try {
+      await runWithErrorAlert('都市を削除できませんでした', async () => {
         const removed = await removeCity(city.id);
         if (!removed) return;
         showUndoToast({
@@ -161,37 +156,35 @@ export function useVisitEditor({
             }
           },
         });
-      } catch (caught) {
-        Alert.alert('都市を削除できませんでした', caught instanceof Error ? caught.message : 'もう一度お試しください。');
-      }
+      });
     },
-    [removeCity, restoreCity, showUndoToast],
+    [removeCity, restoreCity, runWithErrorAlert, showUndoToast],
   );
 
   const handlePickPhotos = useCallback(async () => {
     if (!selectedVisit) return;
-    try {
-      const current = selectedVisit.photos.length;
-      const result = await pickAndStoreVisitPhotos(current, isPremium);
-      if (result.limitReached) {
-        Alert.alert('写真の上限です', PREMIUM_PHOTO_LIMIT_REACHED_MESSAGE);
-        return;
-      }
-      if (result.uris.length === 0) return;
-      await addPhotosToVisit(selectedVisit.visit.id, result.uris);
-    } catch (caught) {
-      // 写真ピッカー〜保存までの失敗原因を後で追えるよう、警告ログを残しておく。
-      console.warn('[country] handlePickPhotos failed', caught);
-      Alert.alert(
-        '写真を追加できませんでした',
-        caught instanceof Error ? caught.message : 'もう一度お試しください。',
-      );
-    }
-  }, [addPhotosToVisit, isPremium, selectedVisit]);
+    await runWithErrorAlert(
+      '写真を追加できませんでした',
+      async () => {
+        const current = selectedVisit.photos.length;
+        const result = await pickAndStoreVisitPhotos(current, isPremium);
+        if (result.limitReached) {
+          Alert.alert('写真の上限です', PREMIUM_PHOTO_LIMIT_REACHED_MESSAGE);
+          return;
+        }
+        if (result.uris.length === 0) return;
+        await addPhotosToVisit(selectedVisit.visit.id, result.uris);
+      },
+      {
+        // 写真ピッカー〜保存までの失敗原因を後で追えるよう、警告ログを残しておく。
+        onError: (caught) => console.warn('[country] handlePickPhotos failed', caught),
+      },
+    );
+  }, [addPhotosToVisit, isPremium, runWithErrorAlert, selectedVisit]);
 
   const handleRemovePhoto = useCallback(
     async (photo: Photo) => {
-      try {
+      await runWithErrorAlert('写真を削除できませんでした', async () => {
         const removed = await removePhoto(photo.id);
         if (!removed) return;
         showUndoToast({
@@ -211,27 +204,23 @@ export function useVisitEditor({
             }
           },
         });
-      } catch (caught) {
-        Alert.alert('写真を削除できませんでした', caught instanceof Error ? caught.message : 'もう一度お試しください。');
-      }
+      });
     },
-    [purgePhotoFile, removePhoto, restorePhoto, showUndoToast],
+    [purgePhotoFile, removePhoto, restorePhoto, runWithErrorAlert, showUndoToast],
   );
 
   const handleAddMemo = useCallback(
     async (type: MemoType) => {
       if (!selectedVisit) return;
-      try {
+      await runWithErrorAlert('メモを追加できませんでした', async () => {
         const created = await addMemo(selectedVisit.visit.id, type, '');
         setMemoPickerOpen(false);
         setEditingMemoId(created.id);
         setMemoDraft('');
         setMemoFilter('all');
-      } catch (caught) {
-        Alert.alert('メモを追加できませんでした', caught instanceof Error ? caught.message : 'もう一度お試しください。');
-      }
+      });
     },
-    [addMemo, selectedVisit, setEditingMemoId, setMemoDraft, setMemoFilter, setMemoPickerOpen],
+    [addMemo, runWithErrorAlert, selectedVisit, setEditingMemoId, setMemoDraft, setMemoFilter, setMemoPickerOpen],
   );
 
   const beginEditMemo = useCallback(
@@ -247,18 +236,16 @@ export function useVisitEditor({
       const next = memoDraft;
       setEditingMemoId(null);
       if (next === memo.content) return;
-      try {
+      await runWithErrorAlert('メモを保存できませんでした', async () => {
         await updateMemoContent(memo.id, next);
-      } catch (caught) {
-        Alert.alert('メモを保存できませんでした', caught instanceof Error ? caught.message : 'もう一度お試しください。');
-      }
+      });
     },
-    [memoDraft, updateMemoContent, setEditingMemoId],
+    [memoDraft, runWithErrorAlert, updateMemoContent, setEditingMemoId],
   );
 
   const handleRemoveMemo = useCallback(
     async (memo: MemoCard, close?: () => void) => {
-      try {
+      await runWithErrorAlert('メモを削除できませんでした', async () => {
         const removed = await removeMemo(memo.id);
         if (!removed) {
           close?.();
@@ -276,11 +263,9 @@ export function useVisitEditor({
             }
           },
         });
-      } catch (caught) {
-        Alert.alert('メモを削除できませんでした', caught instanceof Error ? caught.message : 'もう一度お試しください。');
-      }
+      });
     },
-    [removeMemo, restoreMemo, showUndoToast],
+    [removeMemo, restoreMemo, runWithErrorAlert, showUndoToast],
   );
 
   return {

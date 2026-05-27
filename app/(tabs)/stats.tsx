@@ -1,43 +1,33 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import {
   AppScreen,
-  DonutChart,
   PaperCard,
   PremiumUpgradeCard,
   PrimaryButton,
-  ProgressBar,
   ProgressDonut,
-  SectionTitle,
 } from '@/components';
-import { REGION_COLORS } from '@/constants';
 import { getRegionStats, getWorldProgress, getYearlyTravelSummaries } from '@/features';
-import { usePremium, useTravel } from '@/hooks';
-import { PREMIUM_REVENUECAT_PENDING_MESSAGE, PREMIUM_UNLOCK_SHORT_COPY } from '@/lib';
+import { usePremium, usePremiumDevActions, useTravel } from '@/hooks';
+import { PREMIUM_UNLOCK_SHORT_COPY } from '@/lib';
 import { colors, spacing } from '@/theme';
+
+import { RegionAchievementCard } from './_components/region-achievement-card';
+import { RegionDonutCard } from './_components/region-donut-card';
 
 export default function StatsScreen() {
   const router = useRouter();
   const { data } = useTravel();
-  const { isPremium, setDevelopmentPremium } = usePremium();
+  const { isPremium } = usePremium();
+  const { showRevenueCatPending, enableDevelopmentPremium, disableDevelopmentPremium } = usePremiumDevActions({
+    enableMessage: '開発用フラグで有料機能を確認できます。',
+  });
   const progress = getWorldProgress(data);
   const regionStats = getRegionStats(data);
   const yearlySummaries = getYearlyTravelSummaries(data);
   const latestYearlySummary = yearlySummaries[yearlySummaries.length - 1];
-  const donutSegments = regionStats.map((stat) => ({ value: stat.visited, color: stat.color }));
-  const showRevenueCatPending = () => {
-    Alert.alert('RevenueCat 接続前です', PREMIUM_REVENUECAT_PENDING_MESSAGE);
-  };
-  const enableDevelopmentPremium = async () => {
-    await setDevelopmentPremium(true);
-    Alert.alert('有料表示にしました', '開発用フラグで有料機能を確認できます。');
-  };
-  const disableDevelopmentPremium = async () => {
-    await setDevelopmentPremium(false);
-    Alert.alert('無料表示に戻しました', '開発用フラグをオフにしました。');
-  };
 
   return (
     <AppScreen title="統計" backgroundImage={require('../../assets/images/stats-travel-background.png')} headerAlign="center">
@@ -56,41 +46,9 @@ export default function StatsScreen() {
         <ProgressDonut percentage={progress.percentage} />
       </PaperCard>
 
-      <PaperCard inset style={styles.regionCard}>
-        <SectionTitle title="地域別達成率" />
-        {regionStats.map((stat) => (
-          <View key={stat.region} style={styles.regionRow}>
-            <Text selectable style={styles.regionLabel}>
-              {stat.region}
-            </Text>
-            <View style={styles.regionProgress}>
-              <ProgressBar value={stat.percentage} color={stat.color} />
-            </View>
-            <Text selectable style={styles.regionPercent}>
-              {stat.percentage}%
-            </Text>
-          </View>
-        ))}
-      </PaperCard>
+      <RegionAchievementCard regionStats={regionStats} />
 
-      <PaperCard inset style={styles.donutCard}>
-        <View style={styles.donutWrap}>
-          <DonutChart segments={donutSegments} />
-        </View>
-        <View style={styles.legendList}>
-          {regionStats.map((stat) => (
-            <View key={stat.region} style={styles.legendRow}>
-              <View style={[styles.legendDot, { backgroundColor: REGION_COLORS[stat.region] }]} />
-              <Text selectable style={styles.legendName}>
-                {stat.region}
-              </Text>
-              <Text selectable style={styles.legendValue}>
-                {stat.visited} / {stat.total}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </PaperCard>
+      <RegionDonutCard regionStats={regionStats} />
 
       {isPremium ? (
         <PaperCard style={styles.yearlyCard}>
@@ -156,71 +114,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 16,
     fontWeight: '800',
-  },
-  regionCard: {
-    gap: spacing.md,
-    backgroundColor: 'rgba(255, 249, 238, 0.92)',
-    borderColor: '#DFC895',
-  },
-  regionRow: {
-    minHeight: 32,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  regionLabel: {
-    width: 74,
-    color: colors.textPrimary,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  regionProgress: {
-    flex: 1,
-  },
-  regionPercent: {
-    width: 48,
-    color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '800',
-    textAlign: 'right',
-    fontVariant: ['tabular-nums'],
-  },
-  donutCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-    backgroundColor: 'rgba(255, 249, 238, 0.92)',
-    borderColor: '#DFC895',
-  },
-  donutWrap: {
-    width: 148,
-    alignItems: 'center',
-  },
-  legendList: {
-    flex: 1,
-    gap: spacing.sm,
-  },
-  legendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  legendName: {
-    flex: 1,
-    color: colors.textPrimary,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  legendValue: {
-    color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '800',
-    fontVariant: ['tabular-nums'],
   },
   yearlyCard: {
     gap: spacing.md,
