@@ -15,7 +15,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "app.tabilog.ios",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "訪問記録に旅の写真を追加するため、写真ライブラリへのアクセスを使用します。"
+        "NSPhotoLibraryUsageDescription": "訪問した国の思い出の写真や動画をアプリに保存するために、写真ライブラリへのアクセスを使用します。"
       }
     },
     "plugins": [
@@ -31,7 +31,8 @@
         }
       ],
       "expo-sqlite",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true

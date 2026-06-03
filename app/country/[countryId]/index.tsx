@@ -5,21 +5,18 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AppScreen, EmptyState, PaperCard, PrimaryButton } from '@/components';
 import { COUNTRY_BY_ID } from '@/data';
 import { getCountrySummary, isCountryInBucket } from '@/features';
+import { VisitMediaPreviewModal, VisitMediaSection } from '@/features/visit-media';
 import { useTravel } from '@/hooks';
 import { spacing, text } from '@/theme';
 
 import { CountryHero } from './_components/country-hero';
 import { MemoSection, type MemoFilter } from './_components/memo-section';
 import { MemoPickerModal } from './_components/memo-picker-modal';
-import { PhotoSection } from './_components/photo-section';
 import { TopBar } from './_components/top-bar';
 import { VisitInfoCard } from './_components/visit-info-card';
 import { useMemoAutoscroll } from './_hooks/use-memo-autoscroll';
+import { useCountryVisitMedia } from './_hooks/use-country-visit-media';
 import { useVisitEditor } from './_hooks/use-visit-editor';
-
-const PHOTOS_PER_ROW = 3;
-const DEFAULT_PHOTO_ROWS = 3;
-const DEFAULT_PHOTO_LIMIT = PHOTOS_PER_ROW * DEFAULT_PHOTO_ROWS;
 
 export default function CountryDetailScreen() {
   const router = useRouter();
@@ -35,12 +32,10 @@ export default function CountryDetailScreen() {
   const [isCityEditing, setCityEditing] = useState(false);
   const [cityDraft, setCityDraft] = useState('');
   const [isCityInputOpen, setCityInputOpen] = useState(false);
-  const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [memoFilter, setMemoFilter] = useState<MemoFilter>('all');
   const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
   const [memoDraft, setMemoDraft] = useState('');
   const [isMemoPickerOpen, setMemoPickerOpen] = useState(false);
-
   const { scrollViewRef, registerMemoRef, handleScroll } = useMemoAutoscroll(editingMemoId);
 
   useEffect(() => {
@@ -72,17 +67,26 @@ export default function CountryDetailScreen() {
     return summary?.visits.find((bundle) => bundle.visit.id === selectedVisitId) ?? summary?.visits[0];
   }, [selectedVisitId, summary]);
 
-  // 訪問が切り替わったらインライン編集状態をリセット
+  const {
+    media: visitMedia,
+    previewIndex,
+    setPreviewIndex,
+    mediaActions,
+  } = useCountryVisitMedia({
+    countryId: params.countryId,
+    visitId: selectedVisit?.visit.id,
+  });
+
   useEffect(() => {
     setDatePickerOpen(false);
     setCityEditing(false);
     setCityDraft('');
     setCityInputOpen(false);
-    setShowAllPhotos(false);
     setMemoFilter('all');
     setEditingMemoId(null);
     setMemoDraft('');
-  }, [selectedVisit?.visit.id]);
+    setPreviewIndex(null);
+  }, [selectedVisit?.visit.id, setPreviewIndex]);
 
   const editor = useVisitEditor({
     selectedVisit,
@@ -114,12 +118,7 @@ export default function CountryDetailScreen() {
     );
   }
 
-  const hasOverflowPhotos = (selectedVisit?.photos.length ?? 0) > DEFAULT_PHOTO_LIMIT;
-  const visiblePhotos = selectedVisit
-    ? showAllPhotos
-      ? selectedVisit.photos
-      : selectedVisit.photos.slice(0, DEFAULT_PHOTO_LIMIT)
-    : [];
+  const showSeeAll = visitMedia.length > 10;
 
   return (
     <AppScreen scrollViewRef={scrollViewRef} onScroll={handleScroll}>
@@ -184,15 +183,21 @@ export default function CountryDetailScreen() {
             onRemoveCity={editor.handleRemoveCity}
           />
 
-          <PhotoSection
+          <VisitMediaSection
             isPremium={editor.isPremium}
-            photoCount={selectedVisit.photos.length}
-            visiblePhotos={visiblePhotos}
-            hasOverflow={hasOverflowPhotos}
-            showAll={showAllPhotos}
-            onToggleShowAll={() => setShowAllPhotos((prev) => !prev)}
-            onPickPhotos={editor.handlePickPhotos}
-            onRemovePhoto={editor.handleRemovePhoto}
+            media={visitMedia}
+            showSeeAll={showSeeAll}
+            onSeeAll={() =>
+              router.push({
+                pathname: '/country/[countryId]/album',
+                params: { countryId: country.id, visitId: selectedVisit.visit.id },
+              })
+            }
+            onPickMedia={mediaActions.handlePickMedia}
+            onPressMedia={(_item, index) => setPreviewIndex(index)}
+            onDeleteMedia={mediaActions.handleRemoveMedia}
+            onMoveToFront={mediaActions.handleMoveToFront}
+            onReorder={mediaActions.handleReorder}
           />
 
           <MemoSection
@@ -213,6 +218,13 @@ export default function CountryDetailScreen() {
             visible={isMemoPickerOpen}
             onClose={() => setMemoPickerOpen(false)}
             onPick={editor.handleAddMemo}
+          />
+
+          <VisitMediaPreviewModal
+            visible={previewIndex !== null}
+            media={visitMedia}
+            initialIndex={previewIndex ?? 0}
+            onClose={() => setPreviewIndex(null)}
           />
         </>
       ) : null}

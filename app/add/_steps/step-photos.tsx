@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { EmptyState, PrimaryButton } from '@/components';
 import { FREE_PHOTO_LIMIT } from '@/constants';
-import { PREMIUM_UNLOCK_SHORT_COPY } from '@/lib';
+import { PREMIUM_MEDIA_LIMIT_BODY } from '@/lib';
 import { colors, radius, spacing } from '@/theme';
 
 type StepPhotosProps = {
@@ -20,10 +20,10 @@ export function StepPhotos({ isPremium, photoUris, onPickPhotos, onRemovePhoto, 
     <View style={styles.block}>
       <Text selectable style={styles.helper}>
         {isPremium
-          ? '有料版扱いのため写真は無制限で追加できます。'
+          ? '有料版では、写真や動画を無制限に追加できます。'
           : photoUris.length >= FREE_PHOTO_LIMIT
-            ? PREMIUM_UNLOCK_SHORT_COPY
-            : `あと${Math.max(FREE_PHOTO_LIMIT - photoUris.length, 0)}枚まで追加できます（無料プラン）。`}
+            ? PREMIUM_MEDIA_LIMIT_BODY
+            : `無料版では10枚まできれいに表示。あと${Math.max(FREE_PHOTO_LIMIT - photoUris.length, 0)}件追加できます。`}
       </Text>
       {photoUris.length > 0 ? (
         <View style={styles.photoGrid}>
@@ -46,7 +46,7 @@ export function StepPhotos({ isPremium, photoUris, onPickPhotos, onRemovePhoto, 
       <Pressable style={styles.addPhotoBox} onPress={onPickPhotos}>
         <Ionicons name="add-circle-outline" size={28} color={colors.accentTealDark} />
         <Text selectable style={styles.addPhotoText}>
-          写真を追加
+          写真や動画を追加
         </Text>
       </Pressable>
       <PrimaryButton label="次へ" onPress={onNext} />

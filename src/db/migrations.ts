@@ -39,19 +39,64 @@ export async function ensurePurchaseRow(db: Database) {
 }
 
 export async function migratePhotoPathsToRelative(db: Database) {
-  // 旧仕様で保存された絶対 file:// URI を相対パス（visit-photos/xxx）に揃える。
-  // container UUID が変わると絶対パスが無効になるため、保存形式そのものを切り替える。
   await db.runAsync(
     `UPDATE photos
        SET uri = substr(uri, instr(uri, 'visit-photos/'))
      WHERE uri LIKE '%visit-photos/%'
        AND uri NOT LIKE 'visit-photos/%'`,
   );
+
+  // thumbnail_uri は migrateVisitMediaColumns の後にのみ存在する
+  if (await photosColumnExists(db, 'thumbnail_uri')) {
+    await db.runAsync(
+      `UPDATE photos
+         SET thumbnail_uri = substr(thumbnail_uri, instr(thumbnail_uri, 'visit-videos/'))
+       WHERE thumbnail_uri LIKE '%visit-videos/%'
+         AND thumbnail_uri NOT LIKE 'visit-videos/%'`,
+    );
+  }
+}
+
+async function photosColumnExists(db: Database, column: string) {
+  const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(photos)');
+  return columns.some((row) => row.name === column);
+}
+
+export async function migrateVisitMediaColumns(db: Database) {
+  if (!(await photosColumnExists(db, 'media_type'))) {
+    await db.runAsync(`ALTER TABLE photos ADD COLUMN media_type TEXT NOT NULL DEFAULT 'image'`);
+  }
+  if (!(await photosColumnExists(db, 'sort_order'))) {
+    await db.runAsync(`ALTER TABLE photos ADD COLUMN sort_order INTEGER`);
+  }
+  if (!(await photosColumnExists(db, 'thumbnail_uri'))) {
+    await db.runAsync(`ALTER TABLE photos ADD COLUMN thumbnail_uri TEXT`);
+  }
+  if (!(await photosColumnExists(db, 'width'))) {
+    await db.runAsync(`ALTER TABLE photos ADD COLUMN width REAL`);
+  }
+  if (!(await photosColumnExists(db, 'height'))) {
+    await db.runAsync(`ALTER TABLE photos ADD COLUMN height REAL`);
+  }
+
+  const visits = await db.getAllAsync<{ visitId: string }>(
+    'SELECT DISTINCT visit_id as visitId FROM photos',
+  );
+
+  for (const { visitId } of visits) {
+    const rows = await db.getAllAsync<{ id: string; sortOrder: number | null }>(
+      'SELECT id, sort_order as sortOrder FROM photos WHERE visit_id = ? ORDER BY created_at ASC',
+      visitId,
+    );
+    for (const [index, row] of rows.entries()) {
+      if (row.sortOrder === null) {
+        await db.runAsync('UPDATE photos SET sort_order = ? WHERE id = ?', index, row.id);
+      }
+    }
+  }
 }
 
 export async function removeJapanLegacyData(db: Database) {
-  // 旧仕様で日本を記録対象に含めていた時期のデータを除去する。
-  // 「日本人ユーザー向け」コンセプトに合わせて、日本は記録対象から外す。
   const jpVisitIds = await db.getAllAsync<{ id: string }>(
     `SELECT id FROM visits WHERE country_id = ?`,
     'jp',
@@ -59,11 +104,14 @@ export async function removeJapanLegacyData(db: Database) {
   if (jpVisitIds.length > 0) {
     const placeholders = jpVisitIds.map(() => '?').join(',');
     const ids = jpVisitIds.map((row) => row.id);
-    const photos = await db.getAllAsync<{ uri: string }>(
-      `SELECT uri FROM photos WHERE visit_id IN (${placeholders})`,
+    const photos = await db.getAllAsync<{ uri: string; thumbnailUri: string | null }>(
+      `SELECT uri, thumbnail_uri as thumbnailUri FROM photos WHERE visit_id IN (${placeholders})`,
       ...ids,
     );
-    await deletePhotoFiles(photos.map((p) => p.uri));
+    await deletePhotoFiles([
+      ...photos.map((p) => p.uri),
+      ...photos.map((p) => p.thumbnailUri).filter((uri): uri is string => Boolean(uri)),
+    ]);
     await db.runAsync(`DELETE FROM visits WHERE country_id = ?`, 'jp');
   }
   await db.runAsync(`DELETE FROM bucket_list WHERE country_id = ?`, 'jp');

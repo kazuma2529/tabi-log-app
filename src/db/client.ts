@@ -1,13 +1,11 @@
 import * as SQLite from 'expo-sqlite';
 
+import { migratePhotoPathsToRelative, migrateVisitMediaColumns } from './migrations';
+
 export type Database = SQLite.SQLiteDatabase;
 
 let databasePromise: Promise<Database> | null = null;
-
-export function getDatabase(): Promise<Database> {
-  databasePromise ??= SQLite.openDatabaseAsync('tabi-log.db');
-  return databasePromise;
-}
+let ensureReadyPromise: Promise<void> | null = null;
 
 const SCHEMA_DDL = `
   PRAGMA foreign_keys = ON;
@@ -43,6 +41,11 @@ const SCHEMA_DDL = `
     id TEXT PRIMARY KEY NOT NULL,
     visit_id TEXT NOT NULL,
     uri TEXT NOT NULL,
+    media_type TEXT NOT NULL DEFAULT 'image',
+    thumbnail_uri TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    width REAL,
+    height REAL,
     created_at TEXT NOT NULL,
     FOREIGN KEY (visit_id) REFERENCES visits(id) ON DELETE CASCADE
   );
@@ -82,4 +85,28 @@ const SCHEMA_DDL = `
 
 export async function applySchema(db: Database) {
   await db.execAsync(SCHEMA_DDL);
+}
+
+async function ensureDatabaseReady(db: Database): Promise<void> {
+  await applySchema(db);
+  await migrateVisitMediaColumns(db);
+  await migratePhotoPathsToRelative(db);
+}
+
+export async function getDatabase(): Promise<Database> {
+  if (!databasePromise) {
+    databasePromise = SQLite.openDatabaseAsync('tabi-log.db');
+  }
+
+  const db = await databasePromise;
+
+  try {
+    ensureReadyPromise ??= ensureDatabaseReady(db);
+    await ensureReadyPromise;
+  } catch (error) {
+    ensureReadyPromise = null;
+    throw error;
+  }
+
+  return db;
 }

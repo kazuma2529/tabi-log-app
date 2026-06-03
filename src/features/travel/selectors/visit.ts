@@ -1,4 +1,5 @@
 import { COUNTRY_BY_ID } from "@/data";
+import { sortVisitMedia } from "@/features/visit-media/utils";
 import { compareISODate } from "@/lib";
 import type { CountrySummary, TravelData, VisitBundle } from "@/types";
 
@@ -15,7 +16,7 @@ export function getVisitBundles(data: TravelData): VisitBundle[] {
         visit,
         country,
         cities: data.cities.filter((city) => city.visitId === visit.id),
-        photos: data.photos.filter((photo) => photo.visitId === visit.id),
+        photos: sortVisitMedia(data.photos.filter((photo) => photo.visitId === visit.id)),
         memos: data.memoCards.filter((memo) => memo.visitId === visit.id),
       };
     })

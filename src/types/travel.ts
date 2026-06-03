@@ -29,12 +29,22 @@ export type City = {
   createdAt: string;
 };
 
-export type Photo = {
+export type MediaType = 'image' | 'video';
+
+export type VisitMedia = {
   id: string;
   visitId: string;
   uri: string;
+  mediaType: MediaType;
+  thumbnailUri: string | null;
+  sortOrder: number;
+  width: number | null;
+  height: number | null;
   createdAt: string;
 };
+
+/** @deprecated Use VisitMedia */
+export type Photo = VisitMedia;
 
 export type MemoType =
   | 'learned'
@@ -77,11 +87,19 @@ export type PurchaseState = {
 export type TravelData = {
   visits: Visit[];
   cities: City[];
-  photos: Photo[];
+  photos: VisitMedia[];
   memoCards: MemoCard[];
   bucketList: BucketListItem[];
   bucketMemos: BucketMemo[];
   purchase: PurchaseState;
+};
+
+export type StoredVisitMediaInput = {
+  uri: string;
+  mediaType: MediaType;
+  thumbnailUri?: string;
+  width?: number;
+  height?: number;
 };
 
 export type AddVisitInput = {
@@ -99,7 +117,7 @@ export type VisitBundle = {
   visit: Visit;
   country: Country;
   cities: City[];
-  photos: Photo[];
+  photos: VisitMedia[];
   memos: MemoCard[];
 };
 

@@ -1,22 +1,24 @@
-import { nowISO, resolvePhotoUri } from '@/lib';
-import type { BucketListItem, BucketMemo, City, MemoCard, Photo, PurchaseState, TravelData, Visit } from '@/types';
+import { nowISO, resolveMediaUri } from '@/lib';
+import type {
+  BucketListItem,
+  BucketMemo,
+  City,
+  MediaType,
+  MemoCard,
+  PurchaseState,
+  TravelData,
+  Visit,
+  VisitMedia,
+} from '@/types';
 
-import { applySchema, getDatabase } from './client';
-import {
-  ensurePurchaseRow,
-  migratePhotoPathsToRelative,
-  removeJapanLegacyData,
-  seedCountries,
-} from './migrations';
+import { getDatabase } from './client';
+import { ensurePurchaseRow, removeJapanLegacyData, seedCountries } from './migrations';
 
 export async function initializeDatabase() {
   const db = await getDatabase();
 
-  await applySchema(db);
-
   await seedCountries(db);
   await ensurePurchaseRow(db);
-  await migratePhotoPathsToRelative(db);
   await removeJapanLegacyData(db);
 }
 
@@ -30,8 +32,29 @@ export async function getTravelData(): Promise<TravelData> {
     db.getAllAsync<City>(
       'SELECT id, visit_id as visitId, name, created_at as createdAt FROM cities ORDER BY created_at ASC',
     ),
-    db.getAllAsync<Photo>(
-      'SELECT id, visit_id as visitId, uri, created_at as createdAt FROM photos ORDER BY created_at ASC',
+    db.getAllAsync<{
+      id: string;
+      visitId: string;
+      uri: string;
+      mediaType: MediaType;
+      thumbnailUri: string | null;
+      sortOrder: number;
+      width: number | null;
+      height: number | null;
+      createdAt: string;
+    }>(
+      `SELECT
+        id,
+        visit_id as visitId,
+        uri,
+        media_type as mediaType,
+        thumbnail_uri as thumbnailUri,
+        sort_order as sortOrder,
+        width,
+        height,
+        created_at as createdAt
+      FROM photos
+      ORDER BY sort_order ASC, created_at ASC`,
     ),
     db.getAllAsync<MemoCard>(
       'SELECT id, visit_id as visitId, type, content, created_at as createdAt, updated_at as updatedAt FROM memo_cards ORDER BY created_at ASC',
@@ -65,9 +88,10 @@ export async function getTravelData(): Promise<TravelData> {
 
   // DB に保存されているのは相対パス（visit-photos/xxx）想定だが、
   // 表示側では現在の documentDirectory に解決した絶対 URI を返す。
-  const photos: Photo[] = photoRows.map((row) => ({
+  const photos: VisitMedia[] = photoRows.map((row) => ({
     ...row,
-    uri: resolvePhotoUri(row.uri),
+    uri: resolveMediaUri(row.uri),
+    thumbnailUri: row.thumbnailUri ? resolveMediaUri(row.thumbnailUri) : null,
   }));
 
   return {

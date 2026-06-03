@@ -5,7 +5,9 @@ import {
   addBucketMemo as addBucketMemoToDb,
   addCity as addCityToDb,
   addMemo as addMemoToDb,
-  addPhotosToVisit as addPhotosToVisitInDb,
+  addMediaToVisit as addMediaToVisitInDb,
+  moveVisitMediaToFront as moveVisitMediaToFrontInDb,
+  reorderVisitMedia as reorderVisitMediaInDb,
   addVisit as addVisitToDb,
   getTravelData,
   initializeDatabase,
@@ -37,6 +39,7 @@ export function TravelProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     const nextData = await getTravelData();
     setData(nextData);
+    setError(null);
   }, []);
 
   useEffect(() => {
@@ -72,7 +75,9 @@ export function TravelProvider({ children }: { children: ReactNode }) {
   const addCity = useRefreshingMutation(addCityToDb, refresh);
   const removeCity = useRefreshingMutation(removeCityFromDb, refresh);
   const restoreCity = useRefreshingMutation(restoreCityInDb, refresh);
-  const addPhotosToVisit = useRefreshingMutation(addPhotosToVisitInDb, refresh);
+  const addMediaToVisit = useRefreshingMutation(addMediaToVisitInDb, refresh);
+  const reorderVisitMedia = useRefreshingMutation(reorderVisitMediaInDb, refresh);
+  const moveVisitMediaToFront = useRefreshingMutation(moveVisitMediaToFrontInDb, refresh);
   const removePhoto = useRefreshingMutation(removePhotoFromDb, refresh);
   const restorePhoto = useRefreshingMutation(restorePhotoInDb, refresh);
   const addMemo = useRefreshingMutation(addMemoToDb, refresh);
@@ -111,7 +116,9 @@ export function TravelProvider({ children }: { children: ReactNode }) {
       addCity,
       removeCity,
       restoreCity,
-      addPhotosToVisit,
+      addMediaToVisit,
+      reorderVisitMedia,
+      moveVisitMediaToFront,
       removePhoto,
       restorePhoto,
       purgePhotoFile,
@@ -131,7 +138,7 @@ export function TravelProvider({ children }: { children: ReactNode }) {
       addBucketMemo,
       addCity,
       addMemo,
-      addPhotosToVisit,
+      addMediaToVisit,
       addVisit,
       data,
       error,
@@ -142,8 +149,10 @@ export function TravelProvider({ children }: { children: ReactNode }) {
       removeBucketMemo,
       removeCity,
       removeMemo,
+      moveVisitMediaToFront,
       removePhoto,
       removeVisit,
+      reorderVisitMedia,
       restoreCity,
       restoreMemo,
       restorePhoto,

@@ -33,12 +33,19 @@ export async function addVisit(input: AddVisitInput) {
     );
   }
 
-  for (const uri of input.photoUris.filter(Boolean)) {
+  for (const [index, uri] of input.photoUris.filter(Boolean).entries()) {
     await db.runAsync(
-      'INSERT INTO photos (id, visit_id, uri, created_at) VALUES (?, ?, ?, ?)',
+      `INSERT INTO photos (
+        id, visit_id, uri, media_type, thumbnail_uri, sort_order, width, height, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       createId('photo'),
       visitId,
       toRelativePhotoPath(uri),
+      'image',
+      null,
+      index,
+      null,
+      null,
       timestamp,
     );
   }

@@ -20,8 +20,10 @@ type AppScreenProps = {
   left?: ReactNode;
   right?: ReactNode;
   children: ReactNode;
+  footerOverlay?: ReactNode;
   sky?: boolean;
   backgroundImage?: ImageSourcePropType;
+  backgroundImageWashOpacity?: number;
   variant?: 'paper' | 'sky' | 'diary';
   headerAlign?: 'left' | 'center';
   scrollViewRef?: RefObject<ScrollView | null>;
@@ -35,8 +37,10 @@ export function AppScreen({
   left,
   right,
   children,
+  footerOverlay,
   sky = false,
   backgroundImage,
+  backgroundImageWashOpacity,
   variant,
   headerAlign = 'left',
   scrollViewRef,
@@ -50,7 +54,11 @@ export function AppScreen({
 
   return (
     <View style={[styles.root, isSky && styles.skyRoot, isDiary && styles.diaryRoot]}>
-      <TravelBackdrop variant={screenVariant} backgroundImage={backgroundImage} />
+      <TravelBackdrop
+        variant={screenVariant}
+        backgroundImage={backgroundImage}
+        backgroundImageWashOpacity={backgroundImageWashOpacity}
+      />
       <ScrollView
         ref={scrollViewRef}
         contentInsetAdjustmentBehavior="never"
@@ -65,7 +73,7 @@ export function AppScreen({
           isDiary && styles.diaryContent,
           {
             paddingTop: isSky ? Math.max(insets.top - 8, 36) : Math.max(insets.top, 22) + (isDiary ? 18 : 4),
-            paddingBottom: Math.max(insets.bottom, 22) + 104,
+            paddingBottom: Math.max(insets.bottom, 22) + 180,
           },
         ]}
       >
@@ -104,16 +112,30 @@ export function AppScreen({
         ) : null}
         {children}
       </ScrollView>
+      {footerOverlay ? (
+        <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+          {footerOverlay}
+        </View>
+      ) : null}
     </View>
   );
 }
 
-function TravelBackdrop({ variant, backgroundImage }: { variant: 'paper' | 'sky' | 'diary'; backgroundImage?: ImageSourcePropType }) {
+function TravelBackdrop({
+  variant,
+  backgroundImage,
+  backgroundImageWashOpacity,
+}: {
+  variant: 'paper' | 'sky' | 'diary';
+  backgroundImage?: ImageSourcePropType;
+  backgroundImageWashOpacity?: number;
+}) {
   if (backgroundImage) {
+    const opacity = backgroundImageWashOpacity ?? 0.14;
     return (
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
         <ImageBackground source={backgroundImage} resizeMode="cover" style={StyleSheet.absoluteFill}>
-          <View style={styles.imageWash} />
+          {opacity > 0 ? <View style={[styles.imageWash, { opacity }]} /> : null}
         </ImageBackground>
       </View>
     );

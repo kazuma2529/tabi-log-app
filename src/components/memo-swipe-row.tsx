@@ -1,12 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { RectButton } from 'react-native-gesture-handler';
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { getMemoDefinition } from '@/data';
 import { colors, radius, shadows, spacing } from '@/theme';
 import type { MemoCard } from '@/types';
+
+import { AppTextInput } from './app-text-input';
 
 type MemoSwipeRowProps = {
   memo: MemoCard;
@@ -84,7 +86,7 @@ export function MemoSwipeRow({
           </View>
           <View style={styles.body}>
             {isEditing ? (
-              <TextInput
+              <AppTextInput
                 value={draft}
                 onChangeText={onChangeDraft}
                 autoFocus
@@ -103,7 +105,7 @@ export function MemoSwipeRow({
                 onPress={() => onStartEdit(memo)}
                 style={({ pressed }) => [styles.contentPressable, pressed && styles.pressed]}
               >
-                <Text selectable style={memo.content ? styles.content : styles.empty} numberOfLines={4}>
+                <Text selectable style={memo.content ? styles.content : styles.empty}>
                   {memo.content || 'タップして入力'}
                 </Text>
               </Pressable>

@@ -1,0 +1,69 @@
+diff --git a/node_modules/react-native/Libraries/Text/TextInput/Multiline/RCTUITextView.mm b/node_modules/react-native/Libraries/Text/TextInput/Multiline/RCTUITextView.mm
+index 6e9c384..b453a4b 100644
+--- a/node_modules/react-native/Libraries/Text/TextInput/Multiline/RCTUITextView.mm
++++ b/node_modules/react-native/Libraries/Text/TextInput/Multiline/RCTUITextView.mm
+@@ -13,6 +13,10 @@
+ #import <React/RCTBackedTextInputDelegateAdapter.h>
+ #import <React/RCTTextAttributes.h>
+ 
++// Must match RCTAttributedStringEventEmitterKey in RCTAttributedTextUtils.h
++// (cannot import directly — Libraries/Text must not depend on ReactCommon).
++static NSString *const kRCTEventEmitterAttributeKey = @"EventEmitter";
++
+ @implementation RCTUITextView {
+   UILabel *_placeholderView;
+   UITextView *_detachedTextView;
+@@ -132,7 +136,17 @@ - (void)setDefaultTextAttributes:(NSDictionary<NSAttributedStringKey, id> *)defa
+   }
+ 
+   _defaultTextAttributes = defaultTextAttributes;
+-  self.typingAttributes = defaultTextAttributes;
++  NSMutableDictionary *typingAttrs = [defaultTextAttributes mutableCopy];
++  [typingAttrs removeObjectForKey:kRCTEventEmitterAttributeKey];
++  NSShadow *shadow = typingAttrs[NSShadowAttributeName];
++  if (shadow && CGSizeEqualToSize(shadow.shadowOffset, CGSizeZero) && shadow.shadowBlurRadius == 0) {
++    [typingAttrs removeObjectForKey:NSShadowAttributeName];
++  }
++  UIColor *bgColor = typingAttrs[NSBackgroundColorAttributeName];
++  if (bgColor && CGColorGetAlpha(bgColor.CGColor) == 0) {
++    [typingAttrs removeObjectForKey:NSBackgroundColorAttributeName];
++  }
++  self.typingAttributes = typingAttrs;
+   [self _updatePlaceholder];
+ }
+ 
+diff --git a/node_modules/react-native/Libraries/Text/TextInput/Singleline/RCTUITextField.mm b/node_modules/react-native/Libraries/Text/TextInput/Singleline/RCTUITextField.mm
+index 377f41e..e51f768 100644
+--- a/node_modules/react-native/Libraries/Text/TextInput/Singleline/RCTUITextField.mm
++++ b/node_modules/react-native/Libraries/Text/TextInput/Singleline/RCTUITextField.mm
+@@ -12,6 +12,10 @@
+ #import <React/RCTUtils.h>
+ #import <React/UIView+React.h>
+ 
++// Must match RCTAttributedStringEventEmitterKey in RCTAttributedTextUtils.h
++// (cannot import directly — Libraries/Text must not depend on ReactCommon).
++static NSString *const kRCTEventEmitterAttributeKey = @"EventEmitter";
++
+ @implementation RCTUITextField {
+   RCTBackedTextFieldDelegateAdapter *_textInputDelegateAdapter;
+   NSDictionary<NSAttributedStringKey, id> *_defaultTextAttributes;
+@@ -93,7 +97,18 @@ - (void)setDefaultTextAttributes:(NSDictionary<NSAttributedStringKey, id> *)defa
+   }
+ 
+   _defaultTextAttributes = defaultTextAttributes;
+-  [super setDefaultTextAttributes:defaultTextAttributes];
++  // Strip attributes that interfere with UIKit's IME composition underline rendering.
++  NSMutableDictionary *uikitAttrs = [defaultTextAttributes mutableCopy];
++  [uikitAttrs removeObjectForKey:kRCTEventEmitterAttributeKey];
++  NSShadow *shadow = uikitAttrs[NSShadowAttributeName];
++  if (shadow && CGSizeEqualToSize(shadow.shadowOffset, CGSizeZero) && shadow.shadowBlurRadius == 0) {
++    [uikitAttrs removeObjectForKey:NSShadowAttributeName];
++  }
++  UIColor *bgColor = uikitAttrs[NSBackgroundColorAttributeName];
++  if (bgColor && CGColorGetAlpha(bgColor.CGColor) == 0) {
++    [uikitAttrs removeObjectForKey:NSBackgroundColorAttributeName];
++  }
++  [super setDefaultTextAttributes:uikitAttrs];
+   [self _updatePlaceholder];
+ }
+ 

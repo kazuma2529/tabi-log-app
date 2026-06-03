@@ -1,6 +1,6 @@
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { EmptyState, PaperCard, PrimaryButton } from '@/components';
+import { AppTextInput, EmptyState, PaperCard, PrimaryButton } from '@/components';
 import { MEMO_CARD_DEFINITIONS } from '@/data';
 import { colors, radius, spacing } from '@/theme';
 import type { MemoType } from '@/types';
@@ -34,7 +34,7 @@ export function StepMemoFill({
               <Text selectable style={styles.memoInputTitle}>
                 {definition.icon} {definition.title}
               </Text>
-              <TextInput
+              <AppTextInput
                 value={memoContents[type]}
                 onChangeText={(content) => onChangeMemoContent(type, content)}
                 placeholder={definition.placeholder}
