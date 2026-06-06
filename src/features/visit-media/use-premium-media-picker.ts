@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
 
-import { usePremium } from '@/hooks';
+import { usePremium, usePremiumActions } from '@/hooks';
 import { pickAndStoreVisitMedia } from '@/lib';
 import type { StoredVisitMediaInput } from '@/types';
 
-import { showPremiumMediaAlert, showPremiumPendingAfterUpgrade } from './show-premium-media-alert';
+import { showPremiumMediaAlert } from './show-premium-media-alert';
 
 type PickVisitMediaWithPremiumGateOptions = {
   currentCount: number;
@@ -13,7 +13,8 @@ type PickVisitMediaWithPremiumGateOptions = {
 };
 
 export function usePremiumMediaPicker() {
-  const { isPremium, setDevelopmentPremium } = usePremium();
+  const { isPremium } = usePremium();
+  const { purchasePremiumWithFeedback } = usePremiumActions();
 
   const pickVisitMediaWithPremiumGate = useCallback(
     async ({ currentCount, onPicked, onError }: PickVisitMediaWithPremiumGateOptions) => {
@@ -21,10 +22,7 @@ export function usePremiumMediaPicker() {
         const result = await pickAndStoreVisitMedia(currentCount, isPremium);
         if (result.limitReached) {
           showPremiumMediaAlert({
-            onUpgrade: async () => {
-              await setDevelopmentPremium(true);
-              showPremiumPendingAfterUpgrade();
-            },
+            onUpgrade: purchasePremiumWithFeedback,
           });
           return;
         }
@@ -38,8 +36,8 @@ export function usePremiumMediaPicker() {
         throw error;
       }
     },
-    [isPremium, setDevelopmentPremium],
+    [isPremium, purchasePremiumWithFeedback],
   );
 
-  return { pickVisitMediaWithPremiumGate, isPremium };
+  return { pickVisitMediaWithPremiumGate };
 }

@@ -31,7 +31,7 @@ export default function MapScreen() {
   }
 
   return (
-    <AppScreen backgroundImage={require('../../assets/images/map-travel-background.png')}>
+    <AppScreen backgroundImage={require('../../assets/images/map-travel-background.jpg')}>
       <View style={styles.mapHeader}>
         <Text selectable style={styles.mapTitle}>
           世界地図

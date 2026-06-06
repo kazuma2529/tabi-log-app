@@ -1,6 +1,14 @@
-# 要件定義書：旅ログ
+# 要件定義書：旅ログ - 世界制覇ログ
 
 ## 1. アプリ概要
+
+| 項目 | 内容 |
+| --- | --- |
+| アプリ名 | 旅ログ - 世界制覇ログ |
+| iPhoneホーム画面の表示名 | 旅ログ |
+| Bundle ID 表示名 | Tabi Log iOS |
+| Bundle ID | `com.kazuma.tabilog` |
+| SKU | `com.kazuma.tabilog` |
 
 本アプリは、ユーザーが人生で訪れた国・都市・写真・動画・メモを記録し、世界制覇の進捗を楽しく振り返るための iOS 専用アプリである。
 
@@ -37,7 +45,7 @@
 | クラウド同期   | なし           |
 | バックアップ   | iCloudバックアップ |
 
-RevenueCat を Expo で使う場合、Expo Go ではなく Expo Development Build / EAS Build 前提で進める。RevenueCat 公式ドキュメントでも、Expo で実際の In-App Purchase を利用・テストするには development build が必要と案内されている。([RevenueCat][1])
+RevenueCat の実課金確認には Expo Go ではなく Expo Development Build / EAS Build を使う。Sandbox 購入確認後の初回配信は TestFlight テスター配信を行わず、EAS の production ビルドを App Store Connect へアップロードして App Review に直接提出する。
 
 RevenueCat の React Native SDK 8 系以降は StoreKit 2 前提になるため、iOS の認証情報は App-Specific Shared Secret ではなく In-App Purchase Key（`.p8`、Key ID、Issuer ID）を RevenueCat に登録する。([RevenueCat In-App Purchase Key][2])
 
@@ -80,7 +88,7 @@ RevenueCat の React Native SDK 8 系以降は StoreKit 2 前提になるため�
 
 無料で利用できる機能：
 
-* 国の登録
+* 5 か国までの国の登録
 * 都市の登録
 * 訪問日の登録
 * メモ登録
@@ -94,6 +102,7 @@ RevenueCat の React Native SDK 8 系以降は StoreKit 2 前提になるため�
 制限：
 
 * 1 訪問あたりの写真・動画合計 10 件まで
+* 訪問国の登録は 5 か国まで
 * 年別分析機能は利用不可
 
 ---
@@ -110,10 +119,32 @@ RevenueCat の React Native SDK 8 系以降は StoreKit 2 前提になるため�
 | App Store Product ID | `com.tabilog.premium` |
 | RevenueCat Offering | `default` |
 
-有料版で解放する機能は以下の 2 点のみ。
+App Store Connect の課金商品設定：
 
-1. 写真・動画無制限
-2. 年別分析機能
+| 項目 | 内容 |
+| --- | --- |
+| Type | Non-Consumable |
+| Reference Name | Tabi Log Premium |
+| Product ID | `com.tabilog.premium` |
+
+RevenueCat の構成：
+
+```txt
+Project: 旅ログ - 世界制覇ログ
+└── App: Tabi Log iOS (`com.kazuma.tabilog`)
+    └── Product: Tabi Log Premium (`com.tabilog.premium`, Non-consumable)
+        ├── Entitlement: premium（プレミアム機能）
+        └── Offering: default（標準プレミアムオファー）
+            └── Package: $rc_lifetime（Lifetime）
+```
+
+アプリは Entitlement `premium` がアクティブかどうかだけを参照して有料機能を解放する。Offering `default` の Package `$rc_lifetime` から Product `com.tabilog.premium` を購入する。
+
+有料版で解放する機能は以下の 3 点のみ。
+
+1. 6 か国目以降の訪問国登録
+2. 写真・動画無制限
+3. 年別分析機能
 
 サブスクリプション、消耗型課金、広告、外部決済は導入しない。復元ボタンは必須。
 
@@ -158,7 +189,28 @@ App Store Connect では、非消耗型（Non-Consumable）の In-App Purchase �
 
 ---
 
-## 5.4 RevenueCat / App Store Connect 準備要件
+## 5.4 訪問国登録制限
+
+無料版では、訪問記録として登録できる国を 5 か国までに制限する。
+
+* 無料版：訪問済み国 5 か国まで登録可能
+* 有料版：訪問済み国を無制限に登録可能
+
+判定はユニークな `country_id` 数で行う。同じ国の 2 回目以降の訪問記録は新しい国として数えないため、無料版でも追加できる。
+
+例：
+
+* タイ、韓国、台湾、フランス、イタリア：無料で登録可能
+* 6 か国目としてスペインを初めて登録する：有料案内を表示
+* タイ 2 回目：無料版でも追加可能
+
+6 か国目以降の新規訪問国を登録しようとした場合は、訪問記録追加フロー内で追加を止め、買い切り 980 円の案内を表示する。
+
+バケットリストへの登録は、この制限の対象外とする。
+
+---
+
+## 5.5 RevenueCat / App Store Connect 準備要件
 
 Phase 15 でコードに触る前に、以下の外部設定を完了する。
 
@@ -171,7 +223,7 @@ Phase 15 でコードに触る前に、以下の外部設定を完了する。
 7. App Store Connect で In-App Purchase Key を作成し、`.p8`、Key ID、Issuer ID を控える。
 8. RevenueCat で Project と iOS App を作成し、Bundle ID、In-App Purchase Key、Product、Entitlement `premium`、Offering `default` を設定する。
 
-実課金テストは Expo Go では行わない。Development Build、EAS Build、または TestFlight 上で Sandbox Apple Account を使って確認する。([Apple Sandbox][5])
+実課金テストは Expo Go では行わず、申請前に Development Build と Sandbox Apple Account で確認する。確認完了後は TestFlight テスター配信を行わず、production ビルドを App Store Connect へアップロードして App Review に直接提出する。アップロードしたビルドが App Store Connect の TestFlight 欄に自動表示されても、テスター配信や TestFlight App Review は行わない。
 
 ---
 
@@ -684,7 +736,7 @@ Phase 15 でコードに触る前に、以下の外部設定を完了する。
 
 ## 実装タイミング
 
-Phase 15（RevenueCat）で EAS Build / TestFlight の基盤が整い、16.3 で Sandbox 課金テストを確認した後、App Store 申請前（Phase 16.4）に実装・検証する。`StoreReview.requestReview()` は TestFlight ビルド上で確認する。
+初回リリースでは実装しない。App Store公開後の更新版で、実機検証方法を用意したうえで実装する。
 
 ---
 
@@ -896,7 +948,7 @@ Phase 15 以降、RevenueCat の状態を正とし、ローカル DB はキャ�
 
 | 機能        |      無料版 | 有料版 |
 | --------- | -------: | --: |
-| 国登録       |        ○ |   ○ |
+| 国登録       | 5か国まで | 無制限 |
 | 都市登録      |        ○ |   ○ |
 | メモ登録      |        ○ |   ○ |
 | 地図表示      |        ○ |   ○ |
@@ -934,9 +986,9 @@ Phase 15 以降、RevenueCat の状態を正とし、ローカル DB はキャ�
 * Bundle ID 確定、App Store Connect アプリ登録、非消耗型 In-App Purchase 作成
 * RevenueCat Project / Product / Entitlement `premium` / Offering `default` の設定
 * RevenueCat 連携と本番課金
-* EAS Build / TestFlight
-* App Store レビュー誘導（2 か国目登録時・Phase 16.4）
-* App Store 申請
+* EAS production ビルドと App Store Connect への直接アップロード
+* App Store への初回申請
+* App Store レビュー誘導（初回公開後の更新版で検討）
 * 地図ズーム時の都市表示（任意）
 * データエクスポート
 * iPad 最適化
@@ -1012,32 +1064,45 @@ Phase 15 以降、RevenueCat の状態を正とし、ローカル DB はキャ�
 
 その国に対して初めて visit が作成された場合を新規訪問国とする。年別分析でも同様。
 
+無料版の訪問国登録制限も、ユニークな `country_id` 数で判定する。同じ国の 2 回目以降の訪問記録は新規訪問国として数えない。
+
 レビュー誘導の「2 か国目」も、ユニークな `country_id` 数で判定する。
 
 ---
 
-## 14.4 写真・動画制限
+## 14.4 訪問国登録制限
+
+訪問記録追加フローで、新しい国を登録するタイミングに課金状態を確認する。無料版で 6 か国目以降の新規訪問国を登録しようとした場合：
+
+* 追加を止める
+* 「無料版では5カ国まで訪問国を登録できます。買い切り版では、6カ国目以降も自由に記録できます。」と案内する
+
+同じ国の 2 回目以降の訪問記録は、無料版でも追加できる。
+
+---
+
+## 14.5 写真・動画制限
 
 追加時に課金状態を確認する。無料版で上限超過時：
 
 * 追加を止める
-* 「買い切り 980 円で写真無制限と年別分析が解放」と案内する
+* 「買い切り 980 円で6カ国目以降の国登録、写真無制限、年別分析が解放」と案内する
 
 ---
 
-## 14.5 年別分析のロック
+## 14.6 年別分析のロック
 
 無料版で年別分析を開いた場合、機能説明・購入ボタン・復元ボタンを表示する。
 
 ---
 
-## 14.6 バケットリスト重複防止
+## 14.7 バケットリスト重複防止
 
 同じ国はバケットリストに重複登録できない。
 
 ---
 
-## 14.7 訪問済みになった国の扱い
+## 14.8 訪問済みになった国の扱い
 
 バケットリストに入っている国を訪問記録として登録した場合、**自動削除**する。
 
@@ -1108,6 +1173,9 @@ Phase 15 以降、RevenueCat の状態を正とし、ローカル DB はキャ�
 ## 訪問記録追加
 
 * 6 ステップで国・日付・都市・メディア・メモを保存できる
+* 無料版では 5 か国まで新規訪問国を登録できる
+* 無料版で 6 か国目の新規訪問国を登録しようとすると、有料案内が表示され保存されない
+* 無料版でも、登録済みの国に 2 回目以降の訪問記録を追加できる
 * メモなしでも保存できる
 * 保存後に国詳細へ遷移する
 
@@ -1135,7 +1203,7 @@ Phase 15 以降、RevenueCat の状態を正とし、ローカル DB はキャ�
 * RevenueCat に Product `com.tabilog.premium`、Entitlement `premium`、Offering `default` が設定されている
 * RevenueCat の iOS App 設定に In-App Purchase Key が登録され、認証情報が valid になっている
 * RevenueCat 経由で買い切り 980 円を購入できる
-* 購入後、11 件目以降のメディア追加と年別分析が解放される
+* 購入後、6 か国目以降の新規訪問国登録、11 件目以降のメディア追加、年別分析が解放される
 * 復元ボタンで購入状態を復元できる
 * Sandbox Apple Account を使って、実課金なしで購入・復元・再インストール後の復元を確認できる
 
@@ -1156,8 +1224,8 @@ Phase 15 以降、RevenueCat の状態を正とし、ローカル DB はキャ�
 
 **人生で訪れた国を、写真・動画・都市・メモとともに記録し、世界制覇に近づいていく過程を楽しむアプリ**である。
 
-無料版でも、国の記録・地図・日記・統計・バケットリストは十分使える。
-有料版では、思い出を無制限に残し、年ごとの旅の歩みを深く振り返れるようにする。
+無料版でも、最初の5か国の記録・地図・日記・統計・バケットリストは十分使える。
+有料版では、訪問国と思い出を無制限に残し、年ごとの旅の歩みを深く振り返れるようにする。
 
 [1]: https://www.revenuecat.com/docs/getting-started/installation/expo?utm_source=chatgpt.com "Expo | In-App Subscriptions Made Easy"
 [2]: https://www.revenuecat.com/docs/service-credentials/itunesconnect-app-specific-shared-secret/in-app-purchase-key-configuration "In-App Purchase Key Configuration"

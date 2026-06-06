@@ -4,7 +4,6 @@ import {
   PREMIUM_MEDIA_LIMIT_BODY,
   PREMIUM_MEDIA_LIMIT_CTA,
   PREMIUM_MEDIA_LIMIT_TITLE,
-  PREMIUM_REVENUECAT_PENDING_MESSAGE,
 } from '@/lib';
 
 type ShowPremiumMediaAlertOptions = {
@@ -19,8 +18,4 @@ export function showPremiumMediaAlert({ onUpgrade }: ShowPremiumMediaAlertOption
       onPress: onUpgrade,
     },
   ]);
-}
-
-export function showPremiumPendingAfterUpgrade() {
-  Alert.alert('RevenueCat 接続前です', PREMIUM_REVENUECAT_PENDING_MESSAGE);
 }

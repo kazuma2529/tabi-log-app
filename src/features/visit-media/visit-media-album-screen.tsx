@@ -41,7 +41,7 @@ export function VisitMediaAlbumScreen({
 
   return (
     <AppScreen
-      backgroundImage={require('../../../assets/images/album-paper-background.png')}
+      backgroundImage={require('../../../assets/images/album-paper-background.jpg')}
       backgroundImageWashOpacity={0}
       footerOverlay={
         <View

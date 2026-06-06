@@ -27,7 +27,7 @@ export default function AddVisitScreen() {
     cityInput,
     setCityInput,
     cityNames,
-    photoUris,
+    mediaItems,
     selectedMemoTypes,
     memoContents,
     isSaving,
@@ -92,7 +92,7 @@ export default function AddVisitScreen() {
       {step === 2 ? (
         <StepPhotos
           isPremium={isPremium}
-          photoUris={photoUris}
+          mediaItems={mediaItems}
           onPickPhotos={pickPhotos}
           onRemovePhoto={removePhoto}
           onNext={() => setStep(3)}

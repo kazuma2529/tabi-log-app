@@ -10,7 +10,7 @@ export default function VisitedCountriesScreen() {
       title="旅した国"
       headerAlign="center"
       variant="diary"
-      backgroundImage={require('../../assets/images/diary-travel-background.png')}
+      backgroundImage={require('../../assets/images/diary-travel-background.jpg')}
       left={<BackIconButton onPress={() => router.back()} />}
     >
       <VisitedCountriesList />

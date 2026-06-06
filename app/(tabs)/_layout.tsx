@@ -20,6 +20,11 @@ export default function TabsLayout() {
     >
       <Tabs.Screen
         name="index"
+        listeners={({ navigation }) => ({
+          tabPress: (event) => {
+            if (navigation.isFocused()) event.preventDefault();
+          },
+        })}
         options={{
           title: 'ホーム',
           tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />,
@@ -27,6 +32,11 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="map"
+        listeners={({ navigation }) => ({
+          tabPress: (event) => {
+            if (navigation.isFocused()) event.preventDefault();
+          },
+        })}
         options={{
           title: '地図',
           tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'map' : 'map-outline'} size={24} color={color} />,
@@ -48,6 +58,11 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="diary"
+        listeners={({ navigation }) => ({
+          tabPress: (event) => {
+            if (navigation.isFocused()) event.preventDefault();
+          },
+        })}
         options={{
           title: '記録',
           tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'journal' : 'journal-outline'} size={24} color={color} />,
@@ -55,6 +70,11 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="stats"
+        listeners={({ navigation }) => ({
+          tabPress: (event) => {
+            if (navigation.isFocused()) event.preventDefault();
+          },
+        })}
         options={{
           title: '統計',
           tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'stats-chart' : 'stats-chart-outline'} size={24} color={color} />,

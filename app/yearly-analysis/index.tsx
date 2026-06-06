@@ -5,16 +5,14 @@ import { StyleSheet, View } from 'react-native';
 import {
   AppScreen,
   BackIconButton,
-  EmptyState,
   PremiumUpgradeCard,
-  PrimaryButton,
 } from '@/components';
 import { getYearlyTravelSummaries, type YearlyCountryVisitSummary } from '@/features';
-import { usePremium, usePremiumDevActions, useTravel } from '@/hooks';
-import { PREMIUM_UNLOCK_SHORT_COPY } from '@/lib';
+import { usePremium, usePremiumActions, useTravel } from '@/hooks';
 import { spacing } from '@/theme';
 
 import { MetricCard } from './_components/metric-card';
+import { YearlyAnalysisHero } from './_components/yearly-analysis-hero';
 import { YearCountrySection } from './_components/year-country-section';
 import { YearSelector } from './_components/year-selector';
 import { YearlyTrendChart } from './_components/yearly-trend-chart';
@@ -23,9 +21,7 @@ export default function YearlyAnalysisScreen() {
   const router = useRouter();
   const { data } = useTravel();
   const { isPremium } = usePremium();
-  const { showRevenueCatPending, enableDevelopmentPremium, disableDevelopmentPremium } = usePremiumDevActions({
-    enableMessage: '開発用フラグで年別分析を確認できます。',
-  });
+  const { purchasePremiumWithFeedback, restorePremiumWithFeedback } = usePremiumActions();
   const summaries = useMemo(() => getYearlyTravelSummaries(data), [data]);
   const years = useMemo(() => summaries.map((summary) => summary.year).sort((a, b) => b - a), [summaries]);
   const [selectedYear, setSelectedYear] = useState<number | null>(years[0] ?? null);
@@ -60,14 +56,11 @@ export default function YearlyAnalysisScreen() {
         title="年別分析"
         subtitle="有料版限定"
         left={<BackIconButton onPress={() => router.back()} />}
-        backgroundImage={require('../../assets/images/stats-travel-background.png')}
+        backgroundImage={require('../../assets/images/stats-travel-background.jpg')}
       >
         <PremiumUpgradeCard
-          title="年別分析は有料版限定です"
-          body={`年ごとの訪問国、新規訪問国、推移グラフをまとめて振り返れます。${PREMIUM_UNLOCK_SHORT_COPY}`}
-          onPurchasePress={showRevenueCatPending}
-          onRestorePress={showRevenueCatPending}
-          onEnableDevelopmentPremium={__DEV__ ? enableDevelopmentPremium : undefined}
+          onPurchasePress={purchasePremiumWithFeedback}
+          onRestorePress={restorePremiumWithFeedback}
         />
       </AppScreen>
     );
@@ -78,16 +71,9 @@ export default function YearlyAnalysisScreen() {
       title="年別分析"
       subtitle="年ごとの旅の歩み"
       left={<BackIconButton onPress={() => router.back()} />}
-      backgroundImage={require('../../assets/images/stats-travel-background.png')}
+      backgroundImage={require('../../assets/images/stats-travel-background.jpg')}
     >
-      {summaries.length === 0 ? (
-        <>
-          <EmptyState icon="📔" title="まだ分析できる記録がありません" body="訪問記録を追加すると、年ごとの訪問国と新規訪問国が表示されます。" />
-          {__DEV__ ? (
-            <PrimaryButton label="開発用：無料表示に戻す" variant="secondary" onPress={disableDevelopmentPremium} />
-          ) : null}
-        </>
-      ) : null}
+      <YearlyAnalysisHero summary={selectedSummary} />
 
       {selectedSummary ? (
         <>
@@ -124,10 +110,6 @@ export default function YearlyAnalysisScreen() {
             countries={selectedSummary.newCountries}
             onOpenCountry={openCountryVisit}
           />
-
-          {__DEV__ ? (
-            <PrimaryButton label="開発用：無料表示に戻す" variant="secondary" onPress={disableDevelopmentPremium} />
-          ) : null}
         </>
       ) : null}
     </AppScreen>

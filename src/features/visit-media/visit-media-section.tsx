@@ -44,7 +44,7 @@ export function VisitMediaSection({
   const remainingCount = Math.max(FREE_PHOTO_LIMIT - media.length, 0);
 
   const helperText = isPremium
-    ? '有料版では、写真や動画を無制限に追加できます。'
+    ? 'プレミアムでは、写真や動画を無制限に追加できます。'
     : remainingCount > 0
       ? '無料版では10枚まできれいに表示'
       : '11枚目からは買い切り版で無制限に保存できます。';

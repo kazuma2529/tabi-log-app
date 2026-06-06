@@ -106,7 +106,7 @@ export type AddVisitInput = {
   countryId: string;
   visitedAt: string;
   cityNames: string[];
-  photoUris: string[];
+  mediaItems: StoredVisitMediaInput[];
   memos: {
     type: MemoType;
     content: string;

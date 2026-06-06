@@ -22,12 +22,20 @@ import {
   restoreMemo as restoreMemoInDb,
   restorePhoto as restorePhotoInDb,
   setBucketMemoDone as setBucketMemoDoneInDb,
-  setPremiumForDevelopment,
+  setPremiumFromRevenueCat,
   updateMemoContent as updateMemoContentInDb,
   updateVisitDate as updateVisitDateInDb,
 } from '@/db';
-import type { TravelData } from '@/types';
+import {
+  getRevenueCatPremiumState,
+  hasRevenueCatApiKey,
+  PREMIUM_COUNTRY_LIMIT_ERROR_MESSAGE,
+  purchaseRevenueCatPremium,
+  restoreRevenueCatPremium,
+} from '@/lib';
+import type { AddVisitInput, TravelData } from '@/types';
 
+import { canRegisterVisitCountry } from './selectors';
 import { useRefreshingMutation } from './hooks/create-refreshing-mutation';
 import { TravelContext, emptyTravelData, type TravelContextValue } from './travel-context';
 
@@ -54,6 +62,18 @@ export function TravelProvider({ children }: { children: ReactNode }) {
           setData(nextData);
           setIsReady(true);
         }
+
+        if (hasRevenueCatApiKey()) {
+          try {
+            await setPremiumFromRevenueCat(await getRevenueCatPremiumState());
+            const syncedData = await getTravelData();
+            if (mounted) {
+              setData(syncedData);
+            }
+          } catch {
+            // 通信失敗時は先に表示した SQLite の最終状態を維持する。
+          }
+        }
       } catch (caught) {
         if (mounted) {
           setError(caught instanceof Error ? caught.message : 'データベースの準備に失敗しました。');
@@ -69,7 +89,18 @@ export function TravelProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const addVisit = useRefreshingMutation(addVisitToDb, refresh);
+  const addVisit = useCallback(
+    async (input: AddVisitInput) => {
+      if (!canRegisterVisitCountry(data, input.countryId, data.purchase.isPremium)) {
+        throw new Error(PREMIUM_COUNTRY_LIMIT_ERROR_MESSAGE);
+      }
+
+      const visitId = await addVisitToDb(input);
+      await refresh();
+      return visitId;
+    },
+    [data, refresh],
+  );
   const removeVisit = useRefreshingMutation(removeVisitFromDb, refresh);
   const updateVisitDate = useRefreshingMutation(updateVisitDateInDb, refresh);
   const addCity = useRefreshingMutation(addCityToDb, refresh);
@@ -96,7 +127,24 @@ export function TravelProvider({ children }: { children: ReactNode }) {
   );
   const removeBucketMemo = useRefreshingMutation(removeBucketMemoFromDb, refresh);
   const toggleBucketMemoDone = useRefreshingMutation(setBucketMemoDoneInDb, refresh);
-  const setDevelopmentPremium = useRefreshingMutation(setPremiumForDevelopment, refresh);
+
+  const runPremiumAction = useCallback(
+    async (action: () => Promise<boolean>) => {
+      const isPremium = await action();
+      await setPremiumFromRevenueCat(isPremium);
+      await refresh();
+      return isPremium;
+    },
+    [refresh],
+  );
+  const purchasePremium = useCallback(
+    () => runPremiumAction(purchaseRevenueCatPremium),
+    [runPremiumAction],
+  );
+  const restorePremium = useCallback(
+    () => runPremiumAction(restoreRevenueCatPremium),
+    [runPremiumAction],
+  );
 
   // purgePhotoFile はファイルシステム掃除専用で、TravelData の再取得は不要なので
   // useRefreshingMutation には乗せない。
@@ -131,7 +179,8 @@ export function TravelProvider({ children }: { children: ReactNode }) {
       addBucketMemo,
       removeBucketMemo,
       toggleBucketMemoDone,
-      setDevelopmentPremium,
+      purchasePremium,
+      restorePremium,
     }),
     [
       addBucketCountry,
@@ -144,6 +193,7 @@ export function TravelProvider({ children }: { children: ReactNode }) {
       error,
       isReady,
       purgePhotoFile,
+      purchasePremium,
       refresh,
       removeBucketCountry,
       removeBucketMemo,
@@ -156,7 +206,7 @@ export function TravelProvider({ children }: { children: ReactNode }) {
       restoreCity,
       restoreMemo,
       restorePhoto,
-      setDevelopmentPremium,
+      restorePremium,
       toggleBucketMemoDone,
       updateMemoContent,
       updateVisitDate,

@@ -36,7 +36,8 @@ export type TravelContextValue = {
   addBucketMemo: (countryId: string, content: string) => Promise<void>;
   removeBucketMemo: (memoId: string) => Promise<void>;
   toggleBucketMemoDone: (memoId: string, isDone: boolean) => Promise<void>;
-  setDevelopmentPremium: (isPremium: boolean) => Promise<void>;
+  purchasePremium: () => Promise<boolean>;
+  restorePremium: () => Promise<boolean>;
 };
 
 export const TravelContext = createContext<TravelContextValue | null>(null);
