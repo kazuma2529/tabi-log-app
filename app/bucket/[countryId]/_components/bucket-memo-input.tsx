@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { PaperCard } from '@/components';
+import { AppTextInput, PaperCard } from '@/components';
 import { colors, radius, shadows, spacing } from '@/theme';
 
 type BucketMemoInputProps = {
@@ -16,7 +16,7 @@ export function BucketMemoInput({ value, onChange, onSubmit }: BucketMemoInputPr
   return (
     <PaperCard inset style={styles.addCard}>
       <View style={styles.addInputRow}>
-        <TextInput
+        <AppTextInput
           value={value}
           onChangeText={onChange}
           placeholder="例：エッフェル塔に登る"

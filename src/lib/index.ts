@@ -1,5 +1,12 @@
 export * from './dates';
 export * from './id';
 export * from './onboarding-storage';
-export * from './photos';
 export * from './premium';
+export * from './revenuecat';
+export {
+  deleteMediaFiles as deletePhotoFiles,
+  pickAndStoreVisitMedia,
+  resolveMediaUri,
+  toRelativeMediaPath,
+  toRelativeMediaPath as toRelativePhotoPath,
+} from './visit-media';

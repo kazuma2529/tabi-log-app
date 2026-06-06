@@ -6,8 +6,8 @@ import { Alert } from 'react-native';
 import { useUndoToast } from '@/components';
 import { getMemoDefinition } from '@/data';
 import { useErrorAlert, usePremium, useTravel } from '@/hooks';
-import { pickAndStoreVisitPhotos, PREMIUM_PHOTO_LIMIT_REACHED_MESSAGE, toISODate } from '@/lib';
-import type { City, CountrySummary, MemoCard, MemoType, Photo, VisitBundle } from '@/types';
+import { toISODate } from '@/lib';
+import type { City, CountrySummary, MemoCard, MemoType, VisitBundle } from '@/types';
 
 type UseVisitEditorInput = {
   selectedVisit: VisitBundle | undefined;
@@ -52,10 +52,6 @@ export function useVisitEditor({
     addCity,
     removeCity,
     restoreCity,
-    addPhotosToVisit,
-    removePhoto,
-    restorePhoto,
-    purgePhotoFile,
     addMemo,
     updateMemoContent,
     removeMemo,
@@ -161,54 +157,6 @@ export function useVisitEditor({
     [removeCity, restoreCity, runWithErrorAlert, showUndoToast],
   );
 
-  const handlePickPhotos = useCallback(async () => {
-    if (!selectedVisit) return;
-    await runWithErrorAlert(
-      '写真を追加できませんでした',
-      async () => {
-        const current = selectedVisit.photos.length;
-        const result = await pickAndStoreVisitPhotos(current, isPremium);
-        if (result.limitReached) {
-          Alert.alert('写真の上限です', PREMIUM_PHOTO_LIMIT_REACHED_MESSAGE);
-          return;
-        }
-        if (result.uris.length === 0) return;
-        await addPhotosToVisit(selectedVisit.visit.id, result.uris);
-      },
-      {
-        // 写真ピッカー〜保存までの失敗原因を後で追えるよう、警告ログを残しておく。
-        onError: (caught) => console.warn('[country] handlePickPhotos failed', caught),
-      },
-    );
-  }, [addPhotosToVisit, isPremium, runWithErrorAlert, selectedVisit]);
-
-  const handleRemovePhoto = useCallback(
-    async (photo: Photo) => {
-      await runWithErrorAlert('写真を削除できませんでした', async () => {
-        const removed = await removePhoto(photo.id);
-        if (!removed) return;
-        showUndoToast({
-          label: '写真を削除しました',
-          onUndo: async () => {
-            try {
-              await restorePhoto(removed);
-            } catch {
-              // 復元失敗時は黙る
-            }
-          },
-          onExpire: async () => {
-            try {
-              await purgePhotoFile(removed.uri);
-            } catch {
-              // ファイル削除失敗は黙る
-            }
-          },
-        });
-      });
-    },
-    [purgePhotoFile, removePhoto, restorePhoto, runWithErrorAlert, showUndoToast],
-  );
-
   const handleAddMemo = useCallback(
     async (type: MemoType) => {
       if (!selectedVisit) return;
@@ -275,8 +223,6 @@ export function useVisitEditor({
     handleDateChange,
     handleAddCity,
     handleRemoveCity,
-    handlePickPhotos,
-    handleRemovePhoto,
     handleAddMemo,
     beginEditMemo,
     handleSaveMemo,

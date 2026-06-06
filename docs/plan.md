@@ -42,7 +42,6 @@ RevenueCat、App Store 申請、EAS Build、本番課金設定などの初めて
 - RevenueCat 連携
 - App Store Connect 設定
 - 実機課金テスト
-- TestFlight
 - App Store 申請
 - iPad 最適化
 - データエクスポート
@@ -57,6 +56,8 @@ RevenueCat、App Store 申請、EAS Build、本番課金設定などの初めて
 - 写真はアプリ内ストレージに保存し、SQLite にはファイルパスを保存する。
 - 課金状態は最初は開発用の仮フラグで扱い、最後に RevenueCat へ差し替える。
 - RevenueCat が必要になるまでは Expo Go で確認できる範囲を優先する。
+- RevenueCat の実課金テストは Expo Go ではなく Expo Development Build で行う。初回配信は TestFlight テスター配信を使わず、production ビルドを App Store Connect へアップロードして App Review に直接提出する。
+- RevenueCat の React Native SDK 8 系以降は StoreKit 2 前提になるため、App Store Connect の App-Specific Shared Secret ではなく、RevenueCat に In-App Purchase Key（`.p8`、Key ID、Issuer ID）を登録する。
 
 ### 1.3 課金モデル
 
@@ -64,9 +65,10 @@ RevenueCat、App Store 申請、EAS Build、本番課金設定などの初めて
 
 - 種別：買い切り（非消耗型 / Non-Consumable）
 - 価格：980円
-- 解放する機能：以下の 2 つのみ
-  1. 写真無制限（無料版は1訪問10枚まで）
-  2. 年別分析機能
+- 解放する機能：以下の 3 つのみ
+  1. 6 か国目以降の訪問国登録（無料版は5か国まで）
+  2. 写真無制限（無料版は1訪問10枚まで）
+  3. 年別分析機能
 - サブスクリプション、消耗型課金、広告、外部決済は導入しない。
 - 復元ボタンは必須。買い切りのため、機種変更や再インストール時に必ず復元できることを保証する。
 - 一度購入したら永続的に有効。アプリ側で期限管理は持たない。
@@ -75,8 +77,11 @@ RevenueCat、App Store 申請、EAS Build、本番課金設定などの初めて
 
 - App Store Connect では「非消耗型 In-App Purchase」として課金商品を 1 つだけ登録する。
 - RevenueCat の Entitlement は `premium` 1 種類だけで足りる。
-- 想定 Product ID：`com.tabilog.premium`（最終的な Bundle ID 確定時に合わせて調整）。
+- 想定 Product ID：`com.tabilog.premium`。
+  - Product ID は App Store Connect と RevenueCat とアプリ内実装で完全一致させる。
+  - Bundle ID と完全一致させる必要はないが、先に Bundle ID を確定してから命名する。
 - アプリ内で課金状態を参照する箇所は `isPremium`（boolean）に集約する。
+- App Store Connect では、有料アプリ / アプリ内課金を扱う前に Paid Apps Agreement、税務情報、銀行口座情報を有効化する必要がある。
 
 ---
 
@@ -426,15 +431,18 @@ images/
 - [x] `isPremium` の取得元を 1 か所に集約する（実装：`src/hooks/use-premium.ts` の `usePremium()` フック、文言は `src/lib/premium.ts` に集約）。画面側は値だけを参照し、後で中身を RevenueCat に差し替えるだけで済む構造にする。
 - [x] `isPremium = false` のとき、写真は1訪問10枚までにする。
 - [x] `isPremium = true` のとき、写真を無制限扱いにする。
+- [x] `isPremium = false` のとき、訪問国登録は5か国までにする。
+- [x] `isPremium = true` のとき、6か国目以降の訪問国も登録できるようにする。
 - [x] 年別分析を `isPremium = true` のときだけ表示する。
 - [x] 年別分析のロック画面を作る。
-- [x] 写真上限到達時のアップグレード案内に「買い切り 980円で写真無制限と年別分析が解放」と明示する（`docs/requirements.md` 13.4 参照）。
+- [x] 6か国目以降の新規訪問国登録時に、アップグレード案内を表示して保存を止める。
+- [x] 写真上限到達時のアップグレード案内に「買い切り 980円で6カ国目以降の国登録、写真無制限、年別分析が解放」と明示する（`docs/requirements.md` 14.5 参照）。
 - [x] 購入ボタンと復元ボタンは、この段階では見た目だけ用意する。
 
 完了条件：
 
 - 課金なしでも、有料機能の出し分けが確認できる。
-- 後から RevenueCat に差し替えやすい構造になっている（`usePremium()` の中身だけ差し替えれば済む）。
+- 後から RevenueCat に差し替えやすい構造になっている（`usePremium()` の中身を差し替えれば、国登録・写真・年別分析の制御に反映される）。
 
 ---
 
@@ -595,71 +603,145 @@ images/
 
 事前準備（コードに触る前にやっておく）：
 
-- [ ] Apple Developer Program に登録する（年 $99、審査に数日かかる場合があるため Phase 14 中に着手する）。
-- [ ] App Store Connect にアプリを新規登録する（Bundle ID 確定、アプリ名、SKU）。
-- [ ] App Store Connect で **非消耗型（Non-Consumable）** の課金商品を 1 つ作成する。
-  - Product ID（想定：`com.tabilog.premium`）
-  - 表示名と説明文（例：「写真無制限 + 年別分析」）
-  - 価格 Tier：980円相当
-- [ ] App Store Connect で App-Specific Shared Secret を発行する。
-- [ ] RevenueCat アカウントを作成し、iOS アプリを登録する。Shared Secret も登録する。
-- [ ] RevenueCat に上記 Product を登録し、Entitlement `premium` に紐づける。
-- [ ] Offering を 1 つ作り、上記 Product を Package として登録する。
+- [x] Apple Developer Program に登録する（年 $99。登録済み）。
+- [x] App Store Connect にログインできることを確認する。
+- [x] App Store Connect の Business / Agreements, Tax, and Banking で Paid Apps Agreement を有効化し、税務情報と銀行口座情報を登録する。
+  - 有料アプリや In-App Purchase を扱うには必須。
+  - Account Holder 権限での承認が必要になる場合がある。
+- [x] Bundle ID を `com.kazuma.tabilog` に確定する。
+  - Bundle ID 表示名：`Tabi Log iOS`
+  - EAS / App Store Connect / RevenueCat の iOS アプリ設定で同じ Bundle ID を使う。
+- [x] App Store Connect にアプリを新規登録する。
+  - Platform：iOS
+  - App Name：`旅ログ - 世界制覇ログ`
+  - Primary Language：Japanese
+  - Bundle ID：`Tabi Log iOS - com.kazuma.tabilog`
+  - SKU：`com.kazuma.tabilog`
+- [x] App Store Connect で **非消耗型（Non-Consumable）** の In-App Purchase を 1 つ作成する。
+  - Product ID：`com.tabilog.premium`
+  - Reference Name：`Tabi Log Premium`
+  - 表示名：`訪問国登録 + 写真無制限 + 年別分析`
+  - 説明文：`買い切りで6か国目以降の訪問国登録、写真・動画の保存上限、年別分析を解放します`
+  - 価格：日本を基準に 980円相当
+  - メタデータ変更は Sandbox に反映されるまで最大 1 時間程度かかる場合がある。
+- [x] App Store Connect で Sandbox Apple Account を作成する。
+  - Users and Access → Sandbox から作成する。
+  - Development Build で課金テストするときに使用する。実課金は発生しない。
+- [x] App Store Connect で In-App Purchase Key を作成する。
+  - Users and Access → Integrations → In-App Purchase で作成する。
+  - `.p8` ファイルは一度しかダウンロードできないため、安全な場所に保管する。
+  - RevenueCat に登録するため、`.p8`、Key ID、Issuer ID を控える。
+  - StoreKit 2 前提の RevenueCat では App-Specific Shared Secret ではなく In-App Purchase Key を使う。
+- [x] RevenueCat アカウントを作成し、Project を作成する。
+- [x] RevenueCat に iOS App を登録する。
+  - Bundle ID は App Store Connect / EAS と同じものを入力する。
+  - iOS App API Key を控える。アプリの `Purchases.configure({ apiKey })` で使う。
+- [x] RevenueCat の iOS App 設定に In-App Purchase Key を登録し、認証情報が valid になることを確認する。
+- [x] RevenueCat に App Store Connect の Product `com.tabilog.premium` を登録する。
+- [x] RevenueCat に Entitlement `premium` を作り、Product `com.tabilog.premium` を紐づける。
+- [x] RevenueCat に Offering `default` を作り、買い切り Product を Package `$rc_lifetime` として登録する。
 
 実装：
 
-- [ ] Expo Development Build / EAS Build を準備する（RevenueCat SDK はネイティブモジュールを含むため Expo Go では動かない）。
-- [ ] `react-native-purchases` を導入する。
-- [ ] アプリ起動時に `Purchases.configure({ apiKey })` で初期化する。
-- [ ] `Purchases.getCustomerInfo()` で Entitlement `premium` のアクティブ状態を取得する。
-- [ ] Phase 13 で作った `usePremium()` の中身を RevenueCat ベースに差し替える（呼び出し側は変更不要）。
-- [ ] 購入処理を実装する（`Purchases.getOfferings()` → `Purchases.purchasePackage()`）。
-- [ ] 復元処理を実装する（`Purchases.restorePurchases()`）。買い切りなので機種変更・再インストール時に必須。
-- [ ] RevenueCat の状態を正として `purchases` テーブルにキャッシュし、起動直後のオフライン表示が破綻しないようにする。
+- [x] RevenueCat の `Tabi Log iOS` 用 Public SDK API Key（`appl_` から始まるキー）を `.env.local` の `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY` に設定する。
+  - `test_` から始まるキーは RevenueCat Test Store 用なので、Apple Sandbox / App Store 用ビルドでは使用しない。
+- [x] EAS の `production`環境にも`EXPO_PUBLIC_REVENUECAT_IOS_API_KEY`を登録する。
+  - [x] `development`環境へ登録する。
+  - [x] `production`環境へ登録する。
+- [x] Expo Development Build / EAS Build を準備する（RevenueCat SDK はネイティブモジュールを含むため、実課金テストは Expo Go ではできない）。
+- [x] `expo-dev-client` を導入する。
+- [x] `react-native-purchases` を導入する。
+  - RevenueCat の Paywall UI を使う場合のみ `react-native-purchases-ui` も導入する。
+  - このアプリでは既存のロック画面 / 購入導線を活かすため、まずは `react-native-purchases` のみで進める。
+- [x] `react-native-purchases` は自動リンクされるため、不要な Expo config plugin を追加しない。
+- [x] アプリ起動時に `Purchases.configure({ apiKey })` で初期化する。
+- [x] `Purchases.getCustomerInfo()` で Entitlement `premium` のアクティブ状態を取得する。
+- [x] Phase 13 で作った `usePremium()` の中身を RevenueCat ベースに差し替える。
+- [x] 開発用の有料状態切替ボタンと切替処理を削除し、RevenueCat の課金状態だけを参照する。
+- [x] 購入処理を実装する（`Purchases.getOfferings()` → `offerings.current` から Package を選ぶ → `Purchases.purchasePackage()`）。
+- [x] 復元処理を実装する（`Purchases.restorePurchases()`）。買い切りなので機種変更・再インストール時に必須。
+- [x] RevenueCat の状態を正として `purchases` テーブルにキャッシュし、起動直後のオフライン表示が破綻しないようにする。
+- [x] RevenueCat 取得失敗時は、最後に保存したローカルキャッシュを表示に使う。ただし購入・復元の成否判定は RevenueCat の結果を正とする。
 
 完了条件：
 
 - 買い切り 980円の商品を Sandbox で購入できる。
-- 購入後、写真の11枚目以降が追加でき、年別分析が開ける。
+- 購入後、6か国目以降の訪問国登録、写真の11枚目以降の追加、年別分析が利用できる。
 - アプリを再インストールしてから「復元」ボタンを押すと、有料機能が再度解放される。
 - RevenueCat が取得できない場合でも、ローカルキャッシュにより最低限の表示が破綻しない。
 
 ---
 
-## Phase 16：iOS 実機確認、TestFlight、App Store 準備
+## Phase 16：App Store 直接申請
 
-目的：配信に向けた最終準備を行う。
+目的：TestFlight のテスター配信を行わず、production ビルドを App Store Connect へアップロードして App Review に直接提出する。
 
-アセットと設定：
+Apple の仕組み上、アップロードした iOS ビルドは App Store Connect の TestFlight 欄にも自動表示される。ただし、本方針ではテスター追加、TestFlight 配信、TestFlight App Review は行わない。
 
-- [ ] アプリアイコンを用意する（1024×1024 を基準に Expo が展開）。
-- [ ] スプラッシュ画面を用意する。
-- [ ] アプリ名、Bundle ID、バージョン、ビルド番号を `app.json` / `app.config.ts` で確定する。
-- [ ] 写真アクセス権限の説明文（`NSPhotoLibraryUsageDescription`）を `app.json` に日本語で設定する。例：「訪問した国の思い出写真をアプリに保存するために使用します」。
-- [ ] プライバシーポリシーを公開し URL を控える（写真ライブラリにアクセスするため申請時に必須）。
-- [ ] iCloud バックアップ対象としてデータが保持されることを確認する。
+このフェーズは **16.1 → 16.2 → 16.3 → 16.4** の順で進める。
 
-ビルドと実機確認：
+### 16.1 アセットと申請情報
 
-- [ ] EAS Build で iOS 本番ビルドを作成する。
-- [ ] 実機で主要フローを確認する。
-- [ ] TestFlight にアップロードし、自分の実機で Sandbox 課金テストを行う。
-  - 購入 → 写真の11枚目以降が追加できる / 年別分析が開ける
-  - アプリ再インストール → 復元ボタンで状態が戻る
+- [ ] アプリアイコンとスプラッシュ画面を最終確認する。
+- [ ] アプリ名、Bundle ID、バージョンを確定する。
+  - App Store / EAS 上のアプリ名：`旅ログ - 世界制覇ログ`
+  - iPhone ホーム画面の表示名：`旅ログ`
+  - Bundle ID：`com.kazuma.tabilog`
+- [ ] プライバシーポリシーを公開し URL を控える。
+- [ ] App Store 用スクリーンショットを準備する。
+- [ ] アプリ説明文、キーワード、サポート URL、プライバシーポリシー URLを準備する。
+- [ ] App Review 用メモに、買い切り商品の購入導線と復元手順を記載する。
+- [ ] In-App Purchase の審査用スクリーンショットを登録する。
 
-申請準備：
+### 16.2 production ビルド前の確認
 
-- [ ] App Store 用スクリーンショット（Apple 指定サイズ）を準備する。
-- [ ] App Store 申請情報を準備する。
-  - アプリ説明文、キーワード、サポート URL、プライバシーポリシー URL
-  - 課金商品の表示名と説明文（「買い切り 980円で写真無制限と年別分析を解放」と明記）
-  - App Review 用メモに、買い切り商品の購入導線と復元手順を簡潔に書く
+- [x] EAS の `production` 環境へ `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY` を登録する。
+- [x] `npm run check` を実行する。
+- [ ] Development Build で確認済みの主要機能と Sandbox 購入・復元結果を最終確認する。
+- [ ] 初回申請では未実装の App Store レビュー誘導を含めない。
+- [ ] Developer Mode をオフにする。
+  - iPhone の「設定 → プライバシーとセキュリティ → デベロッパモード」をオフにして再起動する。
+  - Developer Mode は Development Build を実機で動かす場合だけ必要。App Store 申請や App Store 版の利用には不要。
+  - 不要になった Development Build と Expo の端末登録用プロファイルも削除する。
 
-完了条件：
+注意：
 
-- 実機で主要機能が動く。
-- 買い切り 980円の課金の Sandbox テストが通る（購入・再インストール後の復元を含む）。
-- App Store 提出に必要な情報が揃う。
+- production ビルドは App Store 経由でのみインストールでき、直接実機へインストールできない。
+- TestFlight を使わないため、アップロードした production ビルドそのものを提出前に実機確認する工程はない。現在までに確認した Development Build の結果を基準に提出する。
+
+### 16.3 production ビルドの作成とアップロード
+
+- [ ] 次のコマンドで App Store 用 production ビルドを作成する。
+
+```bash
+npx eas-cli build --platform ios --profile production
+```
+
+- [ ] ビルド成功後、次のコマンドで App Store Connect へアップロードする。
+
+```bash
+npx eas-cli submit --platform ios --profile production
+```
+
+- [ ] Apple 側の処理完了メールを待つ。
+- [ ] App Store Connect の App Store 用バージョン画面で、アップロードしたビルドを選択する。
+- [ ] 輸出コンプライアンスの質問が表示された場合は回答する。
+
+### 16.4 App Review への提出
+
+- [ ] App Store Connect の必須項目をすべて入力する。
+- [ ] 価格と配信地域を確認する。
+- [ ] App Privacy の回答を完了する。
+- [ ] In-App Purchase `com.tabilog.premium` を初回申請に含める。
+- [ ] リリース方法を「手動リリース」または希望する方法に設定する。
+- [ ] 「審査へ提出」を押して App Review に直接提出する。
+
+Phase 16 全体の完了条件：
+
+- production ビルドが App Store Connect にアップロードされている。
+- App Store 用バージョンに提出ビルドが紐づいている。
+- In-App Purchase を含む必須情報が揃っている。
+- TestFlight 配信を行わず、App Review のステータスが「審査待ち」になっている。
 
 ---
 
@@ -688,21 +770,25 @@ Codex が実装を進める際は、確認を以下のように分ける。
 
 ## 4. MVP 完了条件
 
-MVP は以下が動いた時点で完了とする。
+MVP（Phase 14.5 まで）は以下が動いた時点で完了とする。
 
 - ホームタブが表示される。
 - 地図タブが表示される。
 - 日記タブが表示される。
 - 統計タブが表示される。
 - 中央プラスボタンから訪問記録を追加できる。
-- 国、訪問日、都市、写真、メモを保存できる。
+- 国、訪問日、都市、写真・動画、メモを保存できる。
 - 同じ国に複数回の訪問記録を保存できる。
 - 国詳細で訪問回タブを切り替えられる。
 - バケットリストを追加、表示、削除できる。
+- 6 枚オンボーディングが初回のみ表示される。
 - SQLite に保存され、アプリ再起動後もデータが残る。
-- 無料版の写真10枚制限が動く。
+- 無料版の写真・動画 10 件制限が動く。
+- 無料版の訪問国 5 か国制限が動く。
 - 年別分析が有料版限定としてロックされる。
 - 参考画像の方向性に近い見た目になっている。
+
+Phase 15 以降（RevenueCat、production ビルド、App Store 直接申請）は MVP 完了後の配信準備フェーズとする。
 
 ---
 
@@ -712,3 +798,4 @@ MVP は以下が動いた時点で完了とする。
 - 便利機能を増やしすぎるより、記録したくなる見た目と、迷わず登録できる体験を優先する。
 - 初心者が後で対応しやすいように、RevenueCat と App Store まわりは最後にまとめて扱う。
 - 迷ったときは `docs/requirements.md` の MVP 範囲と受け入れ基準に戻る。
+- 2026-06 時点の方針：RevenueCat の Development Build による Sandbox 確認後、TestFlight テスター配信は行わず、Phase 16 で App Store に直接申請する。

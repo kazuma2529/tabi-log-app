@@ -5,16 +5,22 @@ import { Alert } from 'react-native';
 
 import { FREE_PHOTO_LIMIT } from '@/constants';
 import { COUNTRY_BY_ID, searchCountries } from '@/data';
-import { getCountrySummaries, getVisitedCountryIds } from '@/features';
-import { usePremium, useTravel } from '@/hooks';
+import {
+  canRegisterVisitCountry,
+  getCountrySummaries,
+  getVisitedCountryIds,
+} from '@/features';
+import { usePremiumMediaPicker } from '@/features/visit-media/use-premium-media-picker';
+import { usePremium, usePremiumActions, useTravel } from '@/hooks';
 import {
   isValidISODate,
-  pickAndStoreVisitPhotos,
-  PREMIUM_PHOTO_LIMIT_REACHED_MESSAGE,
+  PREMIUM_COUNTRY_LIMIT_BODY,
+  PREMIUM_COUNTRY_LIMIT_CTA,
+  PREMIUM_COUNTRY_LIMIT_TITLE,
   toISODate,
   todayISO,
 } from '@/lib';
-import type { MemoType } from '@/types';
+import type { MemoType, StoredVisitMediaInput } from '@/types';
 
 import { type CountryFilter } from '../_constants';
 
@@ -36,6 +42,8 @@ export function useAddVisitForm() {
   const params = useLocalSearchParams<{ countryId?: string }>();
   const { data, addVisit } = useTravel();
   const { isPremium } = usePremium();
+  const { purchasePremiumWithFeedback } = usePremiumActions();
+  const { pickVisitMediaWithPremiumGate } = usePremiumMediaPicker();
 
   const visitedIds = getVisitedCountryIds(data);
   const countrySummaries = getCountrySummaries(data);
@@ -54,19 +62,43 @@ export function useAddVisitForm() {
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const [cityInput, setCityInput] = useState('');
   const [cityNames, setCityNames] = useState<string[]>([]);
-  const [photoUris, setPhotoUris] = useState<string[]>([]);
+  const [mediaItems, setMediaItems] = useState<StoredVisitMediaInput[]>([]);
   const [selectedMemoTypes, setSelectedMemoTypes] = useState<MemoType[]>([]);
   const [memoContents, setMemoContents] = useState<Record<MemoType, string>>(EMPTY_MEMO_CONTENTS);
   const [isSaving, setIsSaving] = useState(false);
 
   const selectedCountry = countryId ? COUNTRY_BY_ID[countryId] : null;
 
+  const showCountryLimitAlert = useCallback(() => {
+    Alert.alert(PREMIUM_COUNTRY_LIMIT_TITLE, PREMIUM_COUNTRY_LIMIT_BODY, [
+      { text: 'あとで', style: 'cancel' },
+      {
+        text: PREMIUM_COUNTRY_LIMIT_CTA,
+        onPress: purchasePremiumWithFeedback,
+      },
+    ]);
+  }, [purchasePremiumWithFeedback]);
+
+  const canSelectCountry = useCallback(
+    (id: string) => canRegisterVisitCountry(data, id, isPremium),
+    [data, isPremium],
+  );
+
   useEffect(() => {
-    if (params.countryId && COUNTRY_BY_ID[params.countryId]) {
-      setCountryId(params.countryId);
-      setStep(1);
+    if (!params.countryId || !COUNTRY_BY_ID[params.countryId]) {
+      return;
     }
-  }, [params.countryId]);
+
+    if (!canSelectCountry(params.countryId)) {
+      setCountryId('');
+      setStep(0);
+      showCountryLimitAlert();
+      return;
+    }
+
+    setCountryId(params.countryId);
+    setStep(1);
+  }, [canSelectCountry, params.countryId, showCountryLimitAlert]);
 
   const countries = useMemo(() => {
     return searchCountries(countryQuery)
@@ -82,10 +114,18 @@ export function useAddVisitForm() {
       .slice(0, 30);
   }, [countryQuery, filter, visitedIds]);
 
-  const selectCountry = useCallback((id: string) => {
-    setCountryId(id);
-    setStep(1);
-  }, []);
+  const selectCountry = useCallback(
+    (id: string) => {
+      if (!canSelectCountry(id)) {
+        showCountryLimitAlert();
+        return;
+      }
+
+      setCountryId(id);
+      setStep(1);
+    },
+    [canSelectCountry, showCountryLimitAlert],
+  );
 
   const addCity = useCallback(() => {
     const trimmed = cityInput.trim();
@@ -102,21 +142,23 @@ export function useAddVisitForm() {
   }, []);
 
   const removePhoto = useCallback((uri: string) => {
-    setPhotoUris((current) => current.filter((item) => item !== uri));
+    setMediaItems((current) => current.filter((item) => item.uri !== uri));
   }, []);
 
   const pickPhotos = useCallback(async () => {
-    try {
-      const result = await pickAndStoreVisitPhotos(photoUris.length, isPremium);
-      if (result.limitReached) {
-        Alert.alert('写真の上限です', PREMIUM_PHOTO_LIMIT_REACHED_MESSAGE);
-        return;
-      }
-      setPhotoUris((current) => [...current, ...result.uris].slice(0, isPremium ? undefined : FREE_PHOTO_LIMIT));
-    } catch (caught) {
-      Alert.alert('写真を追加できませんでした', caught instanceof Error ? caught.message : 'もう一度お試しください。');
-    }
-  }, [isPremium, photoUris.length]);
+    await pickVisitMediaWithPremiumGate({
+      currentCount: mediaItems.length,
+      onPicked: (items) => {
+        setMediaItems((current) => [...current, ...items].slice(0, isPremium ? undefined : FREE_PHOTO_LIMIT));
+      },
+      onError: (caught) => {
+        Alert.alert(
+          '写真や動画を追加できませんでした',
+          caught instanceof Error ? caught.message : 'もう一度お試しください。',
+        );
+      },
+    });
+  }, [isPremium, mediaItems.length, pickVisitMediaWithPremiumGate]);
 
   const toggleMemo = useCallback((type: MemoType) => {
     setSelectedMemoTypes((current) =>
@@ -172,13 +214,19 @@ export function useAddVisitForm() {
       return;
     }
 
+    if (!canSelectCountry(selectedCountry.id)) {
+      showCountryLimitAlert();
+      setStep(0);
+      return;
+    }
+
     setIsSaving(true);
     try {
       await addVisit({
         countryId: selectedCountry.id,
         visitedAt,
         cityNames,
-        photoUris,
+        mediaItems,
         memos: selectedMemoTypes.map((type) => ({ type, content: memoContents[type] ?? '' })),
       });
       setStep(5);
@@ -187,7 +235,17 @@ export function useAddVisitForm() {
     } finally {
       setIsSaving(false);
     }
-  }, [addVisit, cityNames, memoContents, photoUris, selectedCountry, selectedMemoTypes, visitedAt]);
+  }, [
+    addVisit,
+    canSelectCountry,
+    cityNames,
+    memoContents,
+    mediaItems,
+    selectedCountry,
+    selectedMemoTypes,
+    showCountryLimitAlert,
+    visitedAt,
+  ]);
 
   const finish = useCallback(() => {
     if (selectedCountry) {
@@ -216,7 +274,7 @@ export function useAddVisitForm() {
     cityInput,
     setCityInput,
     cityNames,
-    photoUris,
+    mediaItems,
     selectedMemoTypes,
     memoContents,
     isSaving,

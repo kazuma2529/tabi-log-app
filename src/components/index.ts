@@ -1,4 +1,5 @@
 export * from './app-screen';
+export * from './app-text-input';
 export * from './bucket-country-swipe-row';
 export * from './country-photo-card';
 export * from './country-row';

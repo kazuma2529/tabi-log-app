@@ -96,9 +96,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
-    borderColor: colors.border,
+    borderColor: '#D8BA7A',
     borderWidth: 1,
     backgroundColor: 'rgba(255, 250, 238, 0.95)',
+    boxShadow: '0 3px 10px rgba(112, 72, 20, 0.10)',
   },
   pressed: {
     opacity: 0.82,

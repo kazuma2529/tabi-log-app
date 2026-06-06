@@ -1,4 +1,11 @@
-import { createId, deletePhotoFiles, nowISO, toRelativePhotoPath } from '@/lib';
+import { FREE_VISITED_COUNTRY_LIMIT } from '@/constants';
+import {
+  createId,
+  deletePhotoFiles,
+  nowISO,
+  PREMIUM_COUNTRY_LIMIT_ERROR_MESSAGE,
+  toRelativeMediaPath,
+} from '@/lib';
 import type { AddVisitInput } from '@/types';
 
 import { getDatabase } from './client';
@@ -12,6 +19,20 @@ export async function addVisit(input: AddVisitInput) {
     input.countryId,
   );
   const visitOrder = (count?.count ?? 0) + 1;
+
+  if (visitOrder === 1) {
+    const purchase = await db.getFirstAsync<{ isPremium: number }>(
+      'SELECT is_premium as isPremium FROM purchases WHERE id = ?',
+      'local',
+    );
+    const visitedCountryCount = await db.getFirstAsync<{ count: number }>(
+      'SELECT COUNT(DISTINCT country_id) as count FROM visits',
+    );
+
+    if (!purchase?.isPremium && (visitedCountryCount?.count ?? 0) >= FREE_VISITED_COUNTRY_LIMIT) {
+      throw new Error(PREMIUM_COUNTRY_LIMIT_ERROR_MESSAGE);
+    }
+  }
 
   await db.runAsync(
     'INSERT INTO visits (id, country_id, visited_at, visit_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
@@ -33,12 +54,19 @@ export async function addVisit(input: AddVisitInput) {
     );
   }
 
-  for (const uri of input.photoUris.filter(Boolean)) {
+  for (const [index, item] of input.mediaItems.filter((media) => Boolean(media.uri)).entries()) {
     await db.runAsync(
-      'INSERT INTO photos (id, visit_id, uri, created_at) VALUES (?, ?, ?, ?)',
+      `INSERT INTO photos (
+        id, visit_id, uri, media_type, thumbnail_uri, sort_order, width, height, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       createId('photo'),
       visitId,
-      toRelativePhotoPath(uri),
+      toRelativeMediaPath(item.uri),
+      item.mediaType,
+      item.thumbnailUri ? toRelativeMediaPath(item.thumbnailUri) : null,
+      index,
+      item.width ?? null,
+      item.height ?? null,
       timestamp,
     );
   }

@@ -57,7 +57,9 @@ const styles = StyleSheet.create({
   },
   yearPillActive: {
     backgroundColor: colors.accentTealDark,
-    borderColor: colors.accentTealDark,
+    borderColor: colors.accentGoldLight,
+    borderWidth: 1.5,
+    boxShadow: '0 4px 12px rgba(112, 72, 20, 0.18)',
   },
   yearPillText: {
     color: colors.textPrimary,

@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { PaperCard, PrimaryButton } from '@/components';
+import { AppTextInput, PaperCard, PrimaryButton } from '@/components';
 import { formatDateSlash, fromISODate } from '@/lib';
 import { colors, radius, spacing } from '@/theme';
 import type { Country } from '@/types';
@@ -94,7 +94,7 @@ export function StepDetails({
           </Text>
         </View>
         <View style={styles.cityInputRow}>
-          <TextInput
+          <AppTextInput
             value={cityInput}
             onChangeText={onChangeCityInput}
             placeholder="バンコク"

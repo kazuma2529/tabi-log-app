@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "旅ログ",
+    "name": "旅ログ - 世界制覇ログ",
     "slug": "tabi-log-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -13,9 +13,14 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.tabilog.ios",
+      "bundleIdentifier": "com.kazuma.tabilog",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "訪問記録に旅の写真を追加するため、写真ライブラリへのアクセスを使用します。"
+        "CFBundleDisplayName": "旅ログ",
+        "NSPhotoLibraryUsageDescription": "訪問した国の思い出の写真や動画をアプリに保存するために、写真ライブラリへのアクセスを使用します。",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "plugins": [
@@ -31,10 +36,17 @@
         }
       ],
       "expo-sqlite",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4e64a7bd-5564-4c6d-8922-6b5a2d9e668b"
+      }
     }
   }
 }

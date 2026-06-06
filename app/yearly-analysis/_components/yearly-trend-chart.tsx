@@ -71,6 +71,8 @@ const styles = StyleSheet.create({
   chartCard: {
     gap: spacing.md,
     backgroundColor: 'rgba(255, 249, 238, 0.94)',
+    borderColor: '#D8BA7A',
+    boxShadow: '0 5px 16px rgba(112, 72, 20, 0.13)',
   },
   chartLegend: {
     flexDirection: 'row',
@@ -105,6 +107,8 @@ const styles = StyleSheet.create({
   },
   chartRowActive: {
     backgroundColor: 'rgba(47, 155, 145, 0.08)',
+    borderColor: 'rgba(207, 158, 72, 0.52)',
+    borderWidth: 1,
   },
   chartYear: {
     width: 42,

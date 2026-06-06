@@ -40,6 +40,7 @@ export default function RootLayout() {
               <Stack.Screen name="bucket-list/add" options={{ presentation: 'modal' }} />
               <Stack.Screen name="bucket/[countryId]/index" />
               <Stack.Screen name="country/[countryId]/index" />
+              <Stack.Screen name="country/[countryId]/album" />
               <Stack.Screen name="visited-countries/index" />
               <Stack.Screen name="yearly-analysis/index" />
             </Stack>

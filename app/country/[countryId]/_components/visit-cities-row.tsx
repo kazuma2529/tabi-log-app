@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { AppTextInput } from '@/components';
 import { colors, radius, spacing } from '@/theme';
 import type { City } from '@/types';
 
@@ -75,16 +76,18 @@ export function VisitCitiesRow({
             {isCityEditing ? (
               isCityInputOpen ? (
                 <View style={styles.cityInputRow}>
-                  <TextInput
-                    value={cityDraft}
-                    onChangeText={onChangeCityDraft}
-                    autoFocus
-                    placeholder="例: バンコク"
-                    placeholderTextColor={colors.textMuted}
-                    style={styles.cityInput}
-                    returnKeyType="done"
-                    onSubmitEditing={onSubmitCity}
-                  />
+                  <View style={styles.cityInputShell}>
+                    <AppTextInput
+                      value={cityDraft}
+                      onChangeText={onChangeCityDraft}
+                      autoFocus
+                      placeholder="例: バンコク"
+                      placeholderTextColor={colors.textMuted}
+                      style={styles.cityInput}
+                      returnKeyType="done"
+                      onSubmitEditing={onSubmitCity}
+                    />
+                  </View>
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="都市を追加"
@@ -225,17 +228,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
   },
-  cityInput: {
+  cityInputShell: {
     minWidth: 100,
-    minHeight: 30,
+    height: 30,
+    justifyContent: 'center',
     paddingHorizontal: spacing.sm,
     borderRadius: radius.round,
     borderWidth: 1,
     borderColor: colors.accentTealDark,
     backgroundColor: colors.white,
+  },
+  cityInput: {
+    width: '100%',
+    padding: 0,
+    margin: 0,
     color: colors.textPrimary,
     fontSize: 12,
     fontWeight: '700',
+    textAlign: 'center',
+    ...Platform.select({
+      ios: {
+        height: 14,
+        lineHeight: 14,
+      },
+      android: {
+        height: 28,
+        textAlignVertical: 'center',
+        includeFontPadding: false,
+      },
+      default: {
+        height: 28,
+        textAlignVertical: 'center',
+      },
+    }),
   },
   cityCommit: {
     width: 28,

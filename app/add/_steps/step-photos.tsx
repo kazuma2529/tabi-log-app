@@ -4,33 +4,40 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { EmptyState, PrimaryButton } from '@/components';
 import { FREE_PHOTO_LIMIT } from '@/constants';
-import { PREMIUM_UNLOCK_SHORT_COPY } from '@/lib';
+import { PREMIUM_MEDIA_LIMIT_BODY } from '@/lib';
 import { colors, radius, spacing } from '@/theme';
+import type { StoredVisitMediaInput } from '@/types';
 
 type StepPhotosProps = {
   isPremium: boolean;
-  photoUris: string[];
+  mediaItems: StoredVisitMediaInput[];
   onPickPhotos: () => void;
   onRemovePhoto: (uri: string) => void;
   onNext: () => void;
 };
 
-export function StepPhotos({ isPremium, photoUris, onPickPhotos, onRemovePhoto, onNext }: StepPhotosProps) {
+export function StepPhotos({ isPremium, mediaItems, onPickPhotos, onRemovePhoto, onNext }: StepPhotosProps) {
   return (
     <View style={styles.block}>
       <Text selectable style={styles.helper}>
         {isPremium
-          ? '有料版扱いのため写真は無制限で追加できます。'
-          : photoUris.length >= FREE_PHOTO_LIMIT
-            ? PREMIUM_UNLOCK_SHORT_COPY
-            : `あと${Math.max(FREE_PHOTO_LIMIT - photoUris.length, 0)}枚まで追加できます（無料プラン）。`}
+          ? 'プレミアムでは、写真や動画を無制限に追加できます。'
+          : mediaItems.length >= FREE_PHOTO_LIMIT
+            ? PREMIUM_MEDIA_LIMIT_BODY
+            : `無料版では10枚まできれいに表示。あと${Math.max(FREE_PHOTO_LIMIT - mediaItems.length, 0)}件追加できます。`}
       </Text>
-      {photoUris.length > 0 ? (
+      {mediaItems.length > 0 ? (
         <View style={styles.photoGrid}>
-          {photoUris.map((uri) => (
-            <View key={uri} style={styles.photoThumb}>
-              <Image source={{ uri }} style={styles.photoImage} contentFit="cover" />
-              <Pressable style={styles.removePhoto} onPress={() => onRemovePhoto(uri)}>
+          {mediaItems.map((item) => (
+            <View key={item.uri} style={styles.photoThumb}>
+              <Image source={{ uri: item.thumbnailUri ?? item.uri }} style={styles.photoImage} contentFit="cover" />
+              {item.mediaType === 'video' ? (
+                <View style={styles.videoBadge}>
+                  <Ionicons name="videocam" size={12} color={colors.white} />
+                  <Text style={styles.videoBadgeText}>動画</Text>
+                </View>
+              ) : null}
+              <Pressable style={styles.removePhoto} onPress={() => onRemovePhoto(item.uri)}>
                 <Ionicons name="close" size={14} color={colors.textPrimary} />
               </Pressable>
             </View>
@@ -46,7 +53,7 @@ export function StepPhotos({ isPremium, photoUris, onPickPhotos, onRemovePhoto, 
       <Pressable style={styles.addPhotoBox} onPress={onPickPhotos}>
         <Ionicons name="add-circle-outline" size={28} color={colors.accentTealDark} />
         <Text selectable style={styles.addPhotoText}>
-          写真を追加
+          写真や動画を追加
         </Text>
       </Pressable>
       <PrimaryButton label="次へ" onPress={onNext} />
@@ -93,6 +100,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 12,
     backgroundColor: 'rgba(255, 248, 234, 0.9)',
+  },
+  videoBadge: {
+    position: 'absolute',
+    left: 5,
+    bottom: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: radius.round,
+    backgroundColor: 'rgba(53, 35, 16, 0.72)',
+  },
+  videoBadgeText: {
+    color: colors.white,
+    fontSize: 9,
+    fontWeight: '900',
   },
   addPhotoBox: {
     minHeight: 92,

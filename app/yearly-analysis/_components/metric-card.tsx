@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { PaperCard } from '@/components';
-import { colors, spacing } from '@/theme';
+import { colors, radius, spacing } from '@/theme';
 
 type MetricCardProps = {
   label: string;
@@ -14,7 +14,9 @@ type MetricCardProps = {
 export function MetricCard({ label, value, suffix, icon }: MetricCardProps) {
   return (
     <PaperCard inset style={styles.metricCard}>
-      <Ionicons name={icon} size={18} color={colors.accentTealDark} />
+      <View style={styles.icon}>
+        <Ionicons name={icon} size={18} color={colors.accentTealDark} />
+      </View>
       <Text selectable style={styles.metricLabel}>
         {label}
       </Text>
@@ -32,6 +34,18 @@ const styles = StyleSheet.create({
     minHeight: 116,
     gap: spacing.xs,
     backgroundColor: 'rgba(255, 249, 238, 0.94)',
+    borderColor: '#D8BA7A',
+  },
+  icon: {
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+    borderRadius: radius.round,
+    borderColor: '#D9B66E',
+    borderWidth: 1,
+    backgroundColor: '#E3F1EC',
   },
   metricLabel: {
     color: colors.textSecondary,

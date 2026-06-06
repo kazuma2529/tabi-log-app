@@ -1,6 +1,14 @@
 import { createContext } from 'react';
 
-import type { AddVisitInput, City, MemoCard, MemoType, Photo, TravelData } from '@/types';
+import type {
+  AddVisitInput,
+  City,
+  MemoCard,
+  MemoType,
+  StoredVisitMediaInput,
+  TravelData,
+  VisitMedia,
+} from '@/types';
 
 export type TravelContextValue = {
   data: TravelData;
@@ -13,9 +21,11 @@ export type TravelContextValue = {
   addCity: (visitId: string, name: string) => Promise<City | null>;
   removeCity: (cityId: string) => Promise<City | null>;
   restoreCity: (city: City) => Promise<void>;
-  addPhotosToVisit: (visitId: string, uris: string[]) => Promise<Photo[]>;
-  removePhoto: (photoId: string) => Promise<Photo | null>;
-  restorePhoto: (photo: Photo) => Promise<void>;
+  addMediaToVisit: (visitId: string, items: StoredVisitMediaInput[]) => Promise<VisitMedia[]>;
+  removePhoto: (photoId: string) => Promise<VisitMedia | null>;
+  restorePhoto: (photo: VisitMedia) => Promise<void>;
+  reorderVisitMedia: (visitId: string, orderedIds: string[]) => Promise<void>;
+  moveVisitMediaToFront: (visitId: string, mediaId: string) => Promise<void>;
   purgePhotoFile: (storedUri: string) => Promise<void>;
   addMemo: (visitId: string, type: MemoType, content?: string) => Promise<MemoCard>;
   updateMemoContent: (memoId: string, content: string) => Promise<void>;
@@ -26,7 +36,8 @@ export type TravelContextValue = {
   addBucketMemo: (countryId: string, content: string) => Promise<void>;
   removeBucketMemo: (memoId: string) => Promise<void>;
   toggleBucketMemoDone: (memoId: string, isDone: boolean) => Promise<void>;
-  setDevelopmentPremium: (isPremium: boolean) => Promise<void>;
+  purchasePremium: () => Promise<boolean>;
+  restorePremium: () => Promise<boolean>;
 };
 
 export const TravelContext = createContext<TravelContextValue | null>(null);

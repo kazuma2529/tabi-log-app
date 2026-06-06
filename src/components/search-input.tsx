@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import { StyleSheet, View, type TextInputProps } from 'react-native';
 
 import { colors, radius, spacing } from '@/theme';
+import { AppTextInput } from './app-text-input';
 
 export function SearchInput(props: TextInputProps) {
   return (
     <View style={styles.wrap}>
       <Ionicons name="search" size={18} color={colors.textMuted} />
-      <TextInput
+      <AppTextInput
         placeholderTextColor={colors.textMuted}
         style={styles.input}
         autoCorrect={false}

@@ -133,7 +133,7 @@ export function UndoToastProvider({ children }: { children: ReactNode }) {
   const value = useMemo<UndoToastContextValue>(() => ({ showUndoToast, dismiss }), [showUndoToast, dismiss]);
 
   const translateY = slide.interpolate({ inputRange: [0, 1], outputRange: [80, 0] });
-  const bottomOffset = Math.max(insets.bottom, 16) + 100;
+  const bottomOffset = Math.max(insets.bottom, spacing.lg) + spacing.md;
 
   return (
     <UndoToastContext.Provider value={value}>
@@ -189,6 +189,8 @@ const styles = StyleSheet.create({
     left: spacing.lg,
     right: spacing.lg,
     alignItems: 'center',
+    zIndex: 9999,
+    elevation: 9999,
   },
   toast: {
     width: '100%',
