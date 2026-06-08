@@ -12,7 +12,7 @@
       "ios"
     ],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.kazuma.tabilog",
       "config": {
         "usesNonExemptEncryption": false

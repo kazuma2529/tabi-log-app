@@ -24,11 +24,35 @@ Developer Mode は開発署名されたアプリを実機で動かすための�
 ## 2. ビルド前の確認
 
 1. `npm run check` が成功することを確認する。
-2. EAS の `production` 環境に `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY` が登録されていることを確認する。
-3. App Store Connect の In-App Purchase `com.tabilog.premium` を開く。
-4. 表示名、説明、価格、配信地域、審査用スクリーンショット、審査メモを入力する。
-5. In-App Purchase のステータスが「提出準備完了」相当になっていることを確認する。
-6. App Store 用スクリーンショット、説明文、キーワード、サポート URL、プライバシーポリシー URLを準備する。
+2. `npm run routecheck` が成功し、`app/` 配下に内部コンポーネントや画面用 `default export` のないルートが存在しないことを確認する。
+3. EAS の `production` 環境に `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY` が登録されていることを確認する。
+4. App Store Connect の In-App Purchase `com.tabilog.premium` を開く。
+5. 表示名、説明、価格、配信地域、審査用スクリーンショット、審査メモを入力する。
+6. In-App Purchase のステータスが「提出準備完了」相当になっていることを確認する。
+7. App Store 用スクリーンショット、説明文、キーワード、サポート URL、プライバシーポリシー URLを準備する。
+
+## 2.1 App Review 却下後の再申請確認
+
+2026-06-08 の初回審査では、iPadで内部コンポーネントのルートが未完成メニューとして表示され、押下時にクラッシュした。
+
+再申請前に以下を必ず確認する。
+
+1. App Store Connect の添付クラッシュログをシンボリケートし、修正した原因と一致するか照合する。
+2. iPhoneで、新規インストール状態からオンボーディングと主要フローを確認する。
+3. iPadのiPhone互換表示で、オンボーディングと主要導線がクラッシュしないことを確認する。
+4. タブに「ホーム・地図・追加・記録・統計」以外が表示されないことを確認する。
+5. 全タブ、訪問追加、国詳細、バケットリスト、年別分析、購入・復元導線を操作する。
+6. 新しいビルド処理後、App Store ConnectでiPad用スクリーンショットが必須表示されないことを確認する。
+
+App Review への返信例：
+
+```txt
+We identified that internal Expo Router component files were unintentionally exposed as menu routes on iPad. Opening one of those routes caused the crash because it was not an app screen.
+
+We moved all internal components and hooks outside the app route directory, removed the incomplete menu routes, and made the add action route safe when opened directly. We also added an automated route audit to prevent recurrence.
+
+We configured the app as an iPhone-only app and verified the onboarding flow and all primary navigation flows on iPhone, as well as basic compatibility behavior on iPad. The fix is included in build [BUILD_NUMBER].
+```
 
 ## 3. production ビルドを作成する
 

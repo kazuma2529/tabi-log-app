@@ -1,14 +1,13 @@
 import { AppScreen, BackIconButton, CloseIconButton } from '@/components';
-
-import { StepDots } from './_components/step-dots';
-import { STEP_TITLES } from './_constants';
-import { useAddVisitForm } from './_hooks/use-add-visit-form';
-import { StepComplete } from './_steps/step-complete';
-import { StepCountry } from './_steps/step-country';
-import { StepDetails } from './_steps/step-details';
-import { StepMemoFill } from './_steps/step-memo-fill';
-import { StepMemoPick } from './_steps/step-memo-pick';
-import { StepPhotos } from './_steps/step-photos';
+import { StepDots } from '@/features/add-visit/components/step-dots';
+import { STEP_TITLES } from '@/features/add-visit/constants';
+import { useAddVisitForm } from '@/features/add-visit/hooks/use-add-visit-form';
+import { StepComplete } from '@/features/add-visit/steps/step-complete';
+import { StepCountry } from '@/features/add-visit/steps/step-country';
+import { StepDetails } from '@/features/add-visit/steps/step-details';
+import { StepMemoFill } from '@/features/add-visit/steps/step-memo-fill';
+import { StepMemoPick } from '@/features/add-visit/steps/step-memo-pick';
+import { StepPhotos } from '@/features/add-visit/steps/step-photos';
 
 export default function AddVisitScreen() {
   const form = useAddVisitForm();

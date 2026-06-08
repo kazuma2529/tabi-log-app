@@ -8,7 +8,8 @@
     "ios": "expo run:ios",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm run lint",
+    "routecheck": "node tools/verify-routes.mjs",
+    "check": "npm run routecheck && npm run typecheck && npm run lint",
     "postinstall": "patch-package",
     "android": "expo run:android"
   },

@@ -9,12 +9,11 @@ import {
   getMostVisitedCountry,
   getWorldProgress,
 } from '@/features';
+import { HomeBucketSection } from '@/features/home/home-bucket-section';
+import { HomeSimpleStatsCard } from '@/features/home/home-simple-stats-card';
+import { WorldProgressCard } from '@/features/home/world-progress-card';
 import { useTravel } from '@/hooks';
 import { colors, spacing } from '@/theme';
-
-import { HomeBucketSection } from './_components/home-bucket-section';
-import { HomeSimpleStatsCard } from './_components/home-simple-stats-card';
-import { WorldProgressCard } from './_components/world-progress-card';
 
 export default function HomeScreen() {
   const router = useRouter();

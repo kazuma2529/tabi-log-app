@@ -4,12 +4,11 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, BackIconButton, EmptyState, PaperCard } from '@/components';
 import { COUNTRY_BY_ID } from '@/data';
+import { BucketMemoInput } from '@/features/bucket-detail/bucket-memo-input';
+import { BucketMemoRow } from '@/features/bucket-detail/bucket-memo-row';
 import { getBucketMemosByCountry, isCountryInBucket } from '@/features';
 import { useTravel } from '@/hooks';
 import { colors, spacing } from '@/theme';
-
-import { BucketMemoInput } from './_components/bucket-memo-input';
-import { BucketMemoRow } from './_components/bucket-memo-row';
 
 export default function BucketCountryScreen() {
   const router = useRouter();

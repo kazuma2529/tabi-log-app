@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
+  Alert,
   Image,
   Pressable,
   StyleSheet,
@@ -32,6 +33,7 @@ export default function OnboardingScreen() {
 
   const scrollX = useSharedValue(0);
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const isCompletingRef = useRef(false);
   const [pageIndex, setPageIndex] = useState(0);
 
   const scrollHandler = useAnimatedScrollHandler({
@@ -47,8 +49,15 @@ export default function OnboardingScreen() {
   }, [pageWidth]);
 
   const handleComplete = useCallback(async () => {
-    await markOnboardingCompleted();
-    router.replace('/(tabs)');
+    if (isCompletingRef.current) return;
+    isCompletingRef.current = true;
+    try {
+      await markOnboardingCompleted();
+      router.replace('/(tabs)');
+    } catch {
+      Alert.alert('開始できませんでした', '保存処理に失敗しました。もう一度お試しください。');
+      isCompletingRef.current = false;
+    }
   }, [router]);
 
   const handleCtaPress = useCallback(() => {

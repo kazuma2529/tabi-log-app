@@ -74,6 +74,8 @@ function OnboardingGate() {
             router.replace('/onboarding');
           }
         }
+      } catch {
+        // 既存ユーザーの完了フラグ保存に失敗しても、通常画面の利用は継続する。
       } finally {
         await SplashScreen.hideAsync().catch(() => {
           // 既に hide 済みのケースは無視する。

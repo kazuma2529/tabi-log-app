@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { colors, spacing } from '@/theme';
 
-import { STEP_TITLES } from '../_constants';
+import { STEP_TITLES } from '../constants';
 
 export function StepDots({ step }: { step: number }) {
   return (

@@ -5,18 +5,17 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AppScreen, EmptyState, PaperCard, PrimaryButton } from '@/components';
 import { COUNTRY_BY_ID } from '@/data';
 import { getCountrySummary, isCountryInBucket } from '@/features';
+import { CountryHero } from '@/features/country-detail/components/country-hero';
+import { MemoSection, type MemoFilter } from '@/features/country-detail/components/memo-section';
+import { MemoPickerModal } from '@/features/country-detail/components/memo-picker-modal';
+import { TopBar } from '@/features/country-detail/components/top-bar';
+import { VisitInfoCard } from '@/features/country-detail/components/visit-info-card';
+import { useCountryVisitMedia } from '@/features/country-detail/hooks/use-country-visit-media';
+import { useMemoAutoscroll } from '@/features/country-detail/hooks/use-memo-autoscroll';
+import { useVisitEditor } from '@/features/country-detail/hooks/use-visit-editor';
 import { VisitMediaPreviewModal, VisitMediaSection } from '@/features/visit-media';
 import { useTravel } from '@/hooks';
 import { spacing, text } from '@/theme';
-
-import { CountryHero } from './_components/country-hero';
-import { MemoSection, type MemoFilter } from './_components/memo-section';
-import { MemoPickerModal } from './_components/memo-picker-modal';
-import { TopBar } from './_components/top-bar';
-import { VisitInfoCard } from './_components/visit-info-card';
-import { useMemoAutoscroll } from './_hooks/use-memo-autoscroll';
-import { useCountryVisitMedia } from './_hooks/use-country-visit-media';
-import { useVisitEditor } from './_hooks/use-visit-editor';
 
 export default function CountryDetailScreen() {
   const router = useRouter();

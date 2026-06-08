@@ -22,7 +22,7 @@ import {
 } from '@/lib';
 import type { MemoType, StoredVisitMediaInput } from '@/types';
 
-import { type CountryFilter } from '../_constants';
+import { type CountryFilter } from '../constants';
 
 const EMPTY_MEMO_CONTENTS: Record<MemoType, string> = {
   learned: '',

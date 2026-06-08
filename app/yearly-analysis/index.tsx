@@ -8,14 +8,13 @@ import {
   PremiumUpgradeCard,
 } from '@/components';
 import { getYearlyTravelSummaries, type YearlyCountryVisitSummary } from '@/features';
+import { MetricCard } from '@/features/yearly-analysis/metric-card';
+import { YearCountrySection } from '@/features/yearly-analysis/year-country-section';
+import { YearSelector } from '@/features/yearly-analysis/year-selector';
+import { YearlyAnalysisHero } from '@/features/yearly-analysis/yearly-analysis-hero';
+import { YearlyTrendChart } from '@/features/yearly-analysis/yearly-trend-chart';
 import { usePremium, usePremiumActions, useTravel } from '@/hooks';
 import { spacing } from '@/theme';
-
-import { MetricCard } from './_components/metric-card';
-import { YearlyAnalysisHero } from './_components/yearly-analysis-hero';
-import { YearCountrySection } from './_components/year-country-section';
-import { YearSelector } from './_components/year-selector';
-import { YearlyTrendChart } from './_components/yearly-trend-chart';
 
 export default function YearlyAnalysisScreen() {
   const router = useRouter();

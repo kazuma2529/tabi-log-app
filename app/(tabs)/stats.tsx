@@ -10,11 +10,10 @@ import {
   ProgressDonut,
 } from '@/components';
 import { getRegionStats, getWorldProgress, getYearlyTravelSummaries } from '@/features';
+import { RegionAchievementCard } from '@/features/stats/region-achievement-card';
+import { RegionDonutCard } from '@/features/stats/region-donut-card';
 import { usePremium, usePremiumActions, useTravel } from '@/hooks';
 import { colors, spacing } from '@/theme';
-
-import { RegionAchievementCard } from './_components/region-achievement-card';
-import { RegionDonutCard } from './_components/region-donut-card';
 
 export default function StatsScreen() {
   const router = useRouter();

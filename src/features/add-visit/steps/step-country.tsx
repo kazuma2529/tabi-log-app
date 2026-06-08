@@ -4,8 +4,8 @@ import { CountryRow, SearchInput } from '@/components';
 import { colors, radius, spacing } from '@/theme';
 import type { Country } from '@/types';
 
-import { SegmentButton } from '../_components/segment-button';
-import { type CountryFilter } from '../_constants';
+import { SegmentButton } from '../components/segment-button';
+import { type CountryFilter } from '../constants';
 
 type StepCountryProps = {
   countries: Country[];
