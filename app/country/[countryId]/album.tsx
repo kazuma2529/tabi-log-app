@@ -62,6 +62,7 @@ export default function VisitMediaAlbumRoute() {
         onDeleteMedia={mediaActions.handleRemoveMedia}
         onReorder={mediaActions.handleReorder}
         onPickMedia={mediaActions.handlePickMedia}
+        isProcessingMedia={mediaActions.isProcessingMedia}
       />
       <VisitMediaPreviewModal
         visible={previewIndex !== null}

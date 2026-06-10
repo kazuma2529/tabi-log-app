@@ -13,7 +13,7 @@ import { VisitInfoCard } from '@/features/country-detail/components/visit-info-c
 import { useCountryVisitMedia } from '@/features/country-detail/hooks/use-country-visit-media';
 import { useMemoAutoscroll } from '@/features/country-detail/hooks/use-memo-autoscroll';
 import { useVisitEditor } from '@/features/country-detail/hooks/use-visit-editor';
-import { VisitMediaPreviewModal, VisitMediaSection } from '@/features/visit-media';
+import { MediaProcessingIndicator, VisitMediaPreviewModal, VisitMediaSection } from '@/features/visit-media';
 import { useTravel } from '@/hooks';
 import { spacing, text } from '@/theme';
 
@@ -120,7 +120,11 @@ export default function CountryDetailScreen() {
   const showSeeAll = visitMedia.length > 10;
 
   return (
-    <AppScreen scrollViewRef={scrollViewRef} onScroll={handleScroll}>
+    <AppScreen
+      scrollViewRef={scrollViewRef}
+      onScroll={handleScroll}
+      footerOverlay={<MediaProcessingIndicator visible={mediaActions.isProcessingMedia} />}
+    >
       <TopBar onMore={summary ? editor.openMoreMenu : undefined} />
       {!summary ? (
         <View style={styles.emptyBlock}>

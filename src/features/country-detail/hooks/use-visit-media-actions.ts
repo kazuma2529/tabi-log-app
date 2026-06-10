@@ -20,7 +20,7 @@ export function useVisitMediaActions({ visitId, currentCount = 0 }: UseVisitMedi
     moveVisitMediaToFront,
   } = useTravel();
   const { showUndoToast } = useUndoToast();
-  const { pickVisitMediaWithPremiumGate } = usePremiumMediaPicker();
+  const { pickVisitMediaWithPremiumGate, isProcessingMedia } = usePremiumMediaPicker();
   const { runWithErrorAlert } = useErrorAlert();
 
   const handlePickMedia = useCallback(async () => {
@@ -87,6 +87,7 @@ export function useVisitMediaActions({ visitId, currentCount = 0 }: UseVisitMedi
 
   return {
     handlePickMedia,
+    isProcessingMedia,
     handleRemoveMedia,
     handleMoveToFront,
     handleReorder,

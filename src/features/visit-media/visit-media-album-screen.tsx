@@ -8,6 +8,7 @@ import { colors, shadows, spacing, text } from '@/theme';
 import type { Country, VisitMedia } from '@/types';
 
 import { TrashDropZone } from './drag-drop/trash-drop-zone';
+import { MediaProcessingIndicator } from './media-processing-indicator';
 import { useDragTargets } from './drag-drop/use-drag-targets';
 import { countMediaByType, formatMediaCountLabel } from './utils';
 import { VisitMediaAddButton } from './visit-media-add-button';
@@ -21,6 +22,7 @@ type VisitMediaAlbumScreenProps = {
   onDeleteMedia: (media: VisitMedia) => void;
   onReorder: (ordered: VisitMedia[]) => void;
   onPickMedia: () => void;
+  isProcessingMedia: boolean;
 };
 
 export function VisitMediaAlbumScreen({
@@ -31,6 +33,7 @@ export function VisitMediaAlbumScreen({
   onDeleteMedia,
   onReorder,
   onPickMedia,
+  isProcessingMedia,
 }: VisitMediaAlbumScreenProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -44,22 +47,25 @@ export function VisitMediaAlbumScreen({
       backgroundImage={require('../../../assets/images/album-paper-background.jpg')}
       backgroundImageWashOpacity={0}
       footerOverlay={
-        <View
-          pointerEvents="box-none"
-          style={[
-            styles.footerOverlay,
-            { paddingBottom: Math.max(insets.bottom, spacing.md) },
-          ]}
-        >
-          <TrashDropZone
-            variant="album"
-            visible={dragging}
-            isActive={overTrash}
-            containerStyle={styles.trashInline}
-            onMeasured={(rect) => targets.setTarget('trash', rect)}
-          />
-          <VisitMediaAddButton variant="album" style={styles.addButton} onPress={onPickMedia} />
-        </View>
+        <>
+          <View
+            pointerEvents="box-none"
+            style={[
+              styles.footerOverlay,
+              { paddingBottom: Math.max(insets.bottom, spacing.md) },
+            ]}
+          >
+            <TrashDropZone
+              variant="album"
+              visible={dragging}
+              isActive={overTrash}
+              containerStyle={styles.trashInline}
+              onMeasured={(rect) => targets.setTarget('trash', rect)}
+            />
+            <VisitMediaAddButton variant="album" style={styles.addButton} onPress={onPickMedia} />
+          </View>
+          <MediaProcessingIndicator visible={isProcessingMedia} />
+        </>
       }
     >
       <View style={styles.header}>

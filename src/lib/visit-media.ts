@@ -78,6 +78,16 @@ function isVideoAsset(asset: ImagePicker.ImagePickerAsset) {
   return mime.startsWith('video/');
 }
 
+function getMediaPickerError(error: unknown): Error {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes('PHPhotosErrorDomain error 3164') || message.includes('PHPhotosErrorDomain error 3169')) {
+    return new Error(
+      '選択した写真や動画をiCloudから取得できませんでした。インターネット接続を確認して、もう一度お試しください。',
+    );
+  }
+  return error instanceof Error ? error : new Error('写真や動画を追加できませんでした。もう一度お試しください。');
+}
+
 export function resolveMediaUri(stored: string): string {
   if (!stored) return stored;
 
@@ -206,14 +216,19 @@ export async function pickAndStoreVisitMedia(currentCount: number, isPremium: bo
     throw new Error('写真や動画を選ぶには写真ライブラリへのアクセス許可が必要です。');
   }
 
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ['images', 'videos'],
-    allowsMultipleSelection: true,
-    orderedSelection: true,
-    quality: 0.88,
-    selectionLimit: isPremium ? 0 : remaining,
-    videoMaxDuration: 120,
-  });
+  let result: ImagePicker.ImagePickerResult;
+  try {
+    result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images', 'videos'],
+      allowsMultipleSelection: true,
+      orderedSelection: true,
+      quality: 0.88,
+      selectionLimit: isPremium ? 0 : remaining,
+      videoMaxDuration: 120,
+    });
+  } catch (error) {
+    throw getMediaPickerError(error);
+  }
 
   if (result.canceled) {
     return {

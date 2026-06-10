@@ -43,7 +43,7 @@ export function useAddVisitForm() {
   const { data, addVisit } = useTravel();
   const { isPremium } = usePremium();
   const { purchasePremiumWithFeedback } = usePremiumActions();
-  const { pickVisitMediaWithPremiumGate } = usePremiumMediaPicker();
+  const { pickVisitMediaWithPremiumGate, isProcessingMedia } = usePremiumMediaPicker();
 
   const visitedIds = getVisitedCountryIds(data);
   const countrySummaries = getCountrySummaries(data);
@@ -278,6 +278,7 @@ export function useAddVisitForm() {
     selectedMemoTypes,
     memoContents,
     isSaving,
+    isProcessingMedia,
     selectedCountry,
     isPremium,
     visitCountByCountry,

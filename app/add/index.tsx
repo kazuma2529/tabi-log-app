@@ -8,6 +8,7 @@ import { StepDetails } from '@/features/add-visit/steps/step-details';
 import { StepMemoFill } from '@/features/add-visit/steps/step-memo-fill';
 import { StepMemoPick } from '@/features/add-visit/steps/step-memo-pick';
 import { StepPhotos } from '@/features/add-visit/steps/step-photos';
+import { MediaProcessingIndicator } from '@/features/visit-media';
 
 export default function AddVisitScreen() {
   const form = useAddVisitForm();
@@ -30,6 +31,7 @@ export default function AddVisitScreen() {
     selectedMemoTypes,
     memoContents,
     isSaving,
+    isProcessingMedia,
     selectedCountry,
     isPremium,
     visitCountByCountry,
@@ -55,6 +57,7 @@ export default function AddVisitScreen() {
       subtitle={`訪問記録の追加 ${Math.min(step + 1, STEP_TITLES.length)} / ${STEP_TITLES.length}`}
       left={canGoBack ? <BackIconButton onPress={() => setStep(step - 1)} /> : undefined}
       right={<CloseIconButton onPress={close} />}
+      footerOverlay={<MediaProcessingIndicator visible={isProcessingMedia} />}
     >
       <StepDots step={step} />
 
